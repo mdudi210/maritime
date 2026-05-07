@@ -1,0 +1,10 @@
+.git
+.github
+.venv
+node_modules
+dist
+*.db
+.pytest_cache
+.pycache
+__pycache__
+*.tsbuildinfo
