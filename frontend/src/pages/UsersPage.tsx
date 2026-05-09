@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { KeyRound, UserPlus, Users } from "lucide-react";
+import { Ban, Edit3, KeyRound, RotateCcw, UserPlus, Users } from "lucide-react";
 import { createUser, getShips, getUsers, resetUserPassword, updateUser } from "../api/maritimeApi";
 import { useAuth } from "../auth/AuthContext";
 import AppShell from "../components/AppShell";
@@ -20,7 +20,12 @@ export default function UsersPage() {
   const [shipId, setShipId] = useState<ShipAssignment>("");
   const [savingUserId, setSavingUserId] = useState<number | null>(null);
   const [resetUser, setResetUser] = useState<UserSummary | null>(null);
+  const [editUser, setEditUser] = useState<UserSummary | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editEmail, setEditEmail] = useState("");
+  const [editUsername, setEditUsername] = useState("");
+  const [editRole, setEditRole] = useState<Role>("crew");
+  const [editShipId, setEditShipId] = useState<ShipAssignment>("");
   const [temporaryPassword, setTemporaryPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -56,7 +61,8 @@ export default function UsersPage() {
     return {
       total: users.length,
       admins: users.filter((member) => member.role === "admin").length,
-      crew: users.filter((member) => member.role === "crew").length
+      crew: users.filter((member) => member.role === "crew").length,
+      inactive: users.filter((member) => !member.is_active).length
     };
   }, [users]);
 
@@ -94,20 +100,54 @@ export default function UsersPage() {
     }
   };
 
-  const onUpdate = async (member: UserSummary, nextRole: Role, nextShipId: ShipAssignment) => {
+  const openEditUser = (member: UserSummary) => {
+    setEditUser(member);
+    setEditEmail(member.email);
+    setEditUsername(member.username);
+    setEditRole(member.role);
+    setEditShipId(member.all_ships ? "all" : member.ship_id ?? "");
+    setError(null);
+    setNotice(null);
+  };
+
+  const onUpdate = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!editUser) return;
+    setSavingUserId(editUser.id);
+    setError(null);
+    setNotice(null);
+    try {
+      await updateUser(editUser.id, {
+        email: editEmail.trim(),
+        username: editUsername.trim(),
+        role: editRole,
+        ship_id: typeof editShipId === "number" ? editShipId : null,
+        all_ships: editShipId === "all"
+      });
+      setEditUser(null);
+      setNotice("User details updated");
+      await reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update user");
+    } finally {
+      setSavingUserId(null);
+    }
+  };
+
+  const onToggleActive = async (member: UserSummary) => {
+    const nextActive = !member.is_active;
+    if (!nextActive && !window.confirm(`Deactivate ${member.username}? They will not be able to log in.`)) {
+      return;
+    }
     setSavingUserId(member.id);
     setError(null);
     setNotice(null);
     try {
-      await updateUser(member.id, {
-        role: nextRole,
-        ship_id: nextRole === "crew" && typeof nextShipId === "number" ? nextShipId : null,
-        all_ships: nextRole === "crew" && nextShipId === "all"
-      });
-      setNotice("User updated");
+      await updateUser(member.id, { is_active: nextActive });
+      setNotice(nextActive ? "User activated" : "User deactivated");
       await reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update user");
+      setError(err instanceof Error ? err.message : "Failed to update user status");
     } finally {
       setSavingUserId(null);
     }
@@ -165,6 +205,10 @@ export default function UsersPage() {
             <span>Crew</span>
             <strong>{counts.crew}</strong>
           </article>
+          <article className="metric">
+            <span>Inactive</span>
+            <strong>{counts.inactive}</strong>
+          </article>
         </section>
 
         <section className="filter-bar">
@@ -208,26 +252,17 @@ export default function UsersPage() {
                   </div>
                   <div className="user-controls">
                     <span className="status-pill">{member.role}</span>
-                    <select
-                      value={member.role}
-                      disabled={savingUserId === member.id || isCurrentUser}
-                      onChange={(event) => onUpdate(member, event.target.value as Role, member.all_ships ? "all" : member.ship_id ?? "")}
-                    >
-                      <option value="crew">Crew</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                    <select
-                      value={member.all_ships ? "all" : member.ship_id ?? ""}
-                      disabled={savingUserId === member.id || member.role === "admin"}
-                      onChange={(event) => onUpdate(member, member.role, event.target.value === "all" ? "all" : event.target.value ? Number(event.target.value) : "")}
-                    >
-                      <option value="">No ship</option>
-                      <option value="all">All ships</option>
-                      {ships.map((ship) => (
-                        <option value={ship.id} key={ship.id}>{ship.name}</option>
-                      ))}
-                    </select>
+                    <span className={`status-pill ${member.is_active ? "" : "muted-pill"}`}>
+                      {member.is_active ? "active" : "inactive"}
+                    </span>
                     <span>{member.all_ships ? "All ships" : member.ship_id ? shipNameById.get(member.ship_id) ?? `Ship #${member.ship_id}` : "No ship"}</span>
+                    <button
+                      className="ghost-button"
+                      disabled={savingUserId === member.id}
+                      onClick={() => openEditUser(member)}
+                    >
+                      <Edit3 size={16} /> Edit
+                    </button>
                     <button
                       className="ghost-button"
                       disabled={savingUserId === member.id}
@@ -239,6 +274,14 @@ export default function UsersPage() {
                       }}
                     >
                       <KeyRound size={16} /> Reset
+                    </button>
+                    <button
+                      className={`ghost-button ${member.is_active ? "danger-button" : ""}`}
+                      disabled={savingUserId === member.id || isCurrentUser}
+                      onClick={() => onToggleActive(member)}
+                    >
+                      {member.is_active ? <Ban size={16} /> : <RotateCcw size={16} />}
+                      {member.is_active ? "Deactivate" : "Activate"}
                     </button>
                   </div>
                 </article>
@@ -272,6 +315,57 @@ export default function UsersPage() {
                 </label>
                 <button className="icon-button" disabled={savingUserId === resetUser.id}>
                   <KeyRound size={18} /> Set temporary password
+                </button>
+              </form>
+            </section>
+          </div>
+        ) : null}
+
+        {editUser ? (
+          <div className="modal-overlay" onClick={() => setEditUser(null)} role="presentation">
+            <section className="modal modal-narrow" onClick={(event) => event.stopPropagation()}>
+              <header className="modal-header">
+                <div>
+                  <strong><Edit3 size={18} /> Edit user</strong>
+                  <span>{editUser.username}</span>
+                </div>
+                <button className="ghost-button" onClick={() => setEditUser(null)}>Close</button>
+              </header>
+              <form className="form" onSubmit={onUpdate}>
+                <label>
+                  Email
+                  <input type="email" value={editEmail} onChange={(event) => setEditEmail(event.target.value)} required />
+                </label>
+                <label>
+                  Display name
+                  <input value={editUsername} onChange={(event) => setEditUsername(event.target.value)} minLength={2} required />
+                </label>
+                <label>
+                  Role
+                  <select
+                    value={editRole}
+                    disabled={editUser.id === currentUser?.id}
+                    onChange={(event) => setEditRole(event.target.value as Role)}
+                  >
+                    <option value="crew">Crew</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </label>
+                <label>
+                  Ship
+                  <select
+                    value={editShipId}
+                    onChange={(event) => setEditShipId(event.target.value === "all" ? "all" : event.target.value ? Number(event.target.value) : "")}
+                  >
+                    <option value="">No ship</option>
+                    <option value="all">All ships</option>
+                    {ships.map((ship) => (
+                      <option value={ship.id} key={ship.id}>{ship.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <button className="icon-button" disabled={savingUserId === editUser.id}>
+                  <Edit3 size={18} /> Save details
                 </button>
               </form>
             </section>
