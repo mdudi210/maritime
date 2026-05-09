@@ -73,6 +73,11 @@ Admin only. Creates a ship.
 
 Admins see all maintenance tasks. Crew users see their assigned ship/tasks. Optional filters: `ship_id`, `status_filter`.
 
+Additional filters:
+
+- `due_from` (YYYY-MM-DD)
+- `due_to` (YYYY-MM-DD)
+
 `POST /maintenance`
 
 Admin only. Creates a maintenance task.
@@ -85,6 +90,11 @@ Admins can update task fields. Crew users can update status on assigned tasks.
 
 Lists safety drills. Optional filters: `ship_id`, `status_filter`.
 
+Additional filters:
+
+- `scheduled_from` (YYYY-MM-DD)
+- `scheduled_to` (YYYY-MM-DD)
+
 `POST /drills`
 
 Admin only. Schedules a drill.
@@ -95,4 +105,12 @@ Admin only. Updates a drill.
 
 `GET /dashboard/compliance`
 
-Returns ship count, task totals, overdue counts, drill totals, and compliance percentages. Optional filter: `ship_id`.
+Returns ship count, task totals, overdue counts, drill totals, and compliance percentages. `drill_compliance_percent` is based on participation (attendance), and `drill_participation_percent` is included explicitly. Optional filter: `ship_id`.
+
+`GET /dashboard/compliance/items`
+
+Returns the list views used by the compliance dashboard:
+
+- `pending_maintenance`
+- `overdue_maintenance`
+- `missed_drills`

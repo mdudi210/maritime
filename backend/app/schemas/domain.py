@@ -105,6 +105,7 @@ class DashboardMetrics(BaseModel):
     drills_missed: int
     maintenance_compliance_percent: float
     drill_compliance_percent: float
+    drill_participation_percent: float
 
 
 class DrillAttendanceMark(BaseModel):

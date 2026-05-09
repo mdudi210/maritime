@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -19,6 +20,8 @@ router = APIRouter(prefix="/maintenance", tags=["maintenance"])
 def list_tasks(
     ship_id: Optional[int] = None,
     status_filter: Optional[str] = None,
+    due_from: Optional[date] = None,
+    due_to: Optional[date] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -29,6 +32,10 @@ def list_tasks(
         query = query.where(MaintenanceTask.ship_id == ship_id)
     if status_filter:
         query = query.where(MaintenanceTask.status == status_filter)
+    if due_from:
+        query = query.where(MaintenanceTask.due_date >= due_from)
+    if due_to:
+        query = query.where(MaintenanceTask.due_date <= due_to)
     return db.scalars(query).all()
 
 

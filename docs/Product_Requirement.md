@@ -60,7 +60,7 @@ Deployment and handoff:
 - Maintenance is overdue when the due date is before today and status is not `completed`.
 - A drill is missed when the scheduled date is before today and status is not `completed`.
 - Maintenance compliance is `completed tasks / total tasks`.
-- Drill compliance is `completed drills / total drills`.
+- Drill participation compliance is `attended participations / total participations` for drills scheduled up to today.
 
 ## Out of Scope for This MVP
 

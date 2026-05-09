@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import require_role
 from app.core.database import get_db
-from app.models.drill import SafetyDrill
+from app.models.drill import DrillParticipation, SafetyDrill
 from app.models.maintenance import MaintenanceTask
 from app.models.ship import Ship
 from app.models.user import User
@@ -45,6 +45,18 @@ def compliance(
         .select_from(SafetyDrill)
         .where(SafetyDrill.status != "completed", SafetyDrill.scheduled_date < today)
     )
+    participation_total_query = (
+        select(func.count())
+        .select_from(DrillParticipation)
+        .join(SafetyDrill, SafetyDrill.id == DrillParticipation.drill_id)
+        .where(SafetyDrill.scheduled_date <= today)
+    )
+    participation_attended_query = (
+        select(func.count())
+        .select_from(DrillParticipation)
+        .join(SafetyDrill, SafetyDrill.id == DrillParticipation.drill_id)
+        .where(SafetyDrill.scheduled_date <= today, DrillParticipation.attendance.is_(True))
+    )
     if effective_ship_id:
         ship_query = ship_query.where(Ship.id == effective_ship_id)
         task_total_query = task_total_query.where(MaintenanceTask.ship_id == effective_ship_id)
@@ -53,6 +65,8 @@ def compliance(
         drill_total_query = drill_total_query.where(SafetyDrill.ship_id == effective_ship_id)
         drill_completed_query = drill_completed_query.where(SafetyDrill.ship_id == effective_ship_id)
         drill_missed_query = drill_missed_query.where(SafetyDrill.ship_id == effective_ship_id)
+        participation_total_query = participation_total_query.where(SafetyDrill.ship_id == effective_ship_id)
+        participation_attended_query = participation_attended_query.where(SafetyDrill.ship_id == effective_ship_id)
 
     ships = db.scalar(ship_query) or 0
     maintenance_total = db.scalar(task_total_query) or 0
@@ -69,6 +83,9 @@ def compliance(
     drills_missed = db.scalar(
         drill_missed_query
     ) or 0
+    participation_total = db.scalar(participation_total_query) or 0
+    participation_attended = db.scalar(participation_attended_query) or 0
+    drill_participation_percent = _percent(participation_attended, participation_total)
     return DashboardMetrics(
         ships=ships,
         maintenance_total=maintenance_total,
@@ -78,7 +95,8 @@ def compliance(
         drills_completed=drills_completed,
         drills_missed=drills_missed,
         maintenance_compliance_percent=_percent(maintenance_completed, maintenance_total),
-        drill_compliance_percent=_percent(drills_completed, drills_total),
+        drill_compliance_percent=drill_participation_percent,
+        drill_participation_percent=drill_participation_percent,
     )
 
 
