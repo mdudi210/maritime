@@ -12,10 +12,13 @@ The implementation intentionally mirrors the core LogOnService session approach:
 - Logout revokes the current refresh session.
 - Logout all revokes every active refresh session for the current user.
 - Public signup is disabled; only authenticated admins can create users.
+- Newly created users and admin password resets require the user to change the temporary password before operational access.
 
 ## Password Storage
 
 Passwords are salted and hashed with PBKDF2-HMAC-SHA256. This is dependency-light for the MVP. For production parity with LogOnService, switch to Argon2id with a managed password policy.
+
+Admins can reset an account to a temporary password. That action revokes active sessions for the target user and sets `password_reset_required=true`.
 
 ## Role-Based Access
 
@@ -24,6 +27,8 @@ Roles:
 - `admin`: can create ships, tasks, drills, and update all compliance resources.
 - `crew`: can view the assigned ship, related drills, and update assigned maintenance task status.
 
+Users with `password_reset_required=true` can reach only account/session endpoints until they change their password.
+
 ## Production Checklist
 
 - Use HTTPS and set `AUTH_COOKIE_SECURE=true`.
@@ -31,5 +36,6 @@ Roles:
 - Restrict `CORS_ORIGINS`.
 - Add rate limiting on auth endpoints.
 - Add audit logging for login, refresh, logout, and admin writes.
+- Add audit logging for task completion, drill attendance, and password reset events.
 - Add Alembic migrations.
 - Add MFA if admin access will be exposed outside a private environment.

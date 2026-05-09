@@ -1,6 +1,6 @@
 # Maritime Operations & Compliance System
 
-A full-stack app for managing vessel maintenance, safety drills, compliance metrics, ship-level filtering, and secure login/logout sessions.
+A full-stack app for managing vessel maintenance, safety drills, compliance metrics, ship-level filtering, crew attendance, completion tracking, and secure login/logout sessions.
 
 The authentication flow follows the same core pattern as `LogOnService`:
 
@@ -10,6 +10,8 @@ The authentication flow follows the same core pattern as `LogOnService`:
 - Logout revokes the current refresh session and clears auth cookies.
 - Logout all revokes every active session for the signed-in user.
 - Public registration is disabled. Only admins can create users and assign crew to ships.
+
+Admins schedule tasks and drills with both a date and time. Completed maintenance tasks show who completed them and when; drill attendance and completion rows show the crew member and timestamp.
 
 ## Stack
 

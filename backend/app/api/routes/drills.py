@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_role, verify_csrf
@@ -23,8 +23,46 @@ from app.schemas.domain import (
 router = APIRouter(prefix="/drills", tags=["drills"])
 
 
+def _start_at(drill: SafetyDrill) -> datetime:
+    return datetime.combine(drill.scheduled_date, drill.scheduled_time)
+
+
+def _end_at(drill: SafetyDrill) -> datetime:
+    return datetime.combine(drill.scheduled_date, drill.end_time)
+
+
+def _drill_is_active(drill: SafetyDrill, now: datetime | None = None) -> bool:
+    current = now or datetime.now()
+    return _start_at(drill) <= current <= _end_at(drill)
+
+
+def _refresh_drill_statuses(db: Session) -> None:
+    now = datetime.now()
+    drills = db.scalars(select(SafetyDrill).where(SafetyDrill.status.in_(["scheduled", "active"]))).all()
+    if not drills:
+        return
+    changed = False
+    for drill in drills:
+        if drill.scheduled_time is None or drill.end_time is None:
+            continue
+        next_status = "scheduled"
+        if now > _end_at(drill):
+            next_status = "completed"
+        elif _drill_is_active(drill, now):
+            next_status = "active"
+        if drill.status != next_status:
+            drill.status = next_status
+            changed = True
+    if changed:
+        db.commit()
+
+
 def _ensure_participation_rows(db: Session, drill: SafetyDrill) -> None:
-    crew = db.scalars(select(User).where(User.role == "crew", User.ship_id == drill.ship_id)).all()
+    if drill.end_time is not None and datetime.now() > _end_at(drill):
+        return
+    crew = db.scalars(
+        select(User).where(User.role == "crew", or_(User.ship_id == drill.ship_id, User.all_ships.is_(True)))
+    ).all()
     if not crew:
         return
     existing_user_ids = set(
@@ -56,11 +94,13 @@ def list_drills(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin", "crew")),
 ):
+    _refresh_drill_statuses(db)
     query = select(SafetyDrill).order_by(SafetyDrill.scheduled_date)
-    if current_user.role == "crew":
-        if not current_user.ship_id:
+    if current_user.role in {"admin", "crew"} and not current_user.all_ships:
+        if current_user.ship_id:
+            query = query.where(SafetyDrill.ship_id == current_user.ship_id)
+        else:
             return []
-        query = query.where(SafetyDrill.ship_id == current_user.ship_id)
     if ship_id:
         query = query.where(SafetyDrill.ship_id == ship_id)
     if status_filter:
@@ -73,10 +113,20 @@ def list_drills(
 
 
 @router.post("", response_model=SafetyDrillRead, dependencies=[Depends(verify_csrf)])
-def create_drill(payload: SafetyDrillCreate, db: Session = Depends(get_db), _: User = Depends(require_role("admin"))):
+def create_drill(
+    payload: SafetyDrillCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin")),
+):
+    if not current_user.all_ships and current_user.ship_id != payload.ship_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+    if payload.end_time <= payload.scheduled_time:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="End Time must be after Start Time")
     drill = SafetyDrill(**payload.model_dump())
     db.add(drill)
     db.commit()
+    db.refresh(drill)
+    _ensure_participation_rows(db, drill)
     db.refresh(drill)
     return drill
 
@@ -86,16 +136,44 @@ def update_drill(
     drill_id: int,
     payload: SafetyDrillUpdate,
     db: Session = Depends(get_db),
-    _: User = Depends(require_role("admin")),
+    current_user: User = Depends(require_role("admin")),
 ):
+    _refresh_drill_statuses(db)
     drill = db.get(SafetyDrill, drill_id)
     if not drill:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found")
-    for key, value in payload.model_dump(exclude_unset=True).items():
+    if not current_user.all_ships and current_user.ship_id != drill.ship_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+    if drill.end_time is not None and datetime.now() > _end_at(drill):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Completed drills are read-only")
+    updates = payload.model_dump(exclude_unset=True)
+    next_start = updates.get("scheduled_time", drill.scheduled_time)
+    next_end = updates.get("end_time", drill.end_time)
+    if next_start is not None and next_end is not None and next_end <= next_start:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="End Time must be after Start Time")
+    for key, value in updates.items():
         setattr(drill, key, value)
     db.commit()
     db.refresh(drill)
     return drill
+
+
+@router.delete("/{drill_id}", dependencies=[Depends(verify_csrf)])
+def delete_drill(
+    drill_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin")),
+) -> dict[str, str]:
+    drill = db.get(SafetyDrill, drill_id)
+    if not drill:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found")
+    if not current_user.all_ships and current_user.ship_id != drill.ship_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+    if drill.end_time is not None and datetime.now() > _end_at(drill):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Completed drills are read-only")
+    db.delete(drill)
+    db.commit()
+    return {"message": "Drill deleted"}
 
 
 @router.get("/{drill_id}/attendance", response_model=list[DrillAttendanceEntry])
@@ -104,12 +182,15 @@ def get_drill_attendance(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin", "crew")),
 ):
+    _refresh_drill_statuses(db)
     drill = db.get(SafetyDrill, drill_id)
     if not drill:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found")
 
+    if current_user.role == "admin" and not current_user.all_ships and current_user.ship_id != drill.ship_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
     if current_user.role == "crew":
-        if not current_user.ship_id or current_user.ship_id != drill.ship_id:
+        if not current_user.all_ships and current_user.ship_id != drill.ship_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
         participation = db.scalars(
             select(DrillParticipation).where(
@@ -139,12 +220,18 @@ def mark_attendance(
     drill = db.get(SafetyDrill, drill_id)
     if not drill:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found")
-    if not current_user.ship_id or current_user.ship_id != drill.ship_id:
+    if not current_user.all_ships and current_user.ship_id != drill.ship_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
-    if date.today() != drill.scheduled_date:
+    if drill.scheduled_time is None or drill.end_time is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Attendance can only be marked on the scheduled date",
+            detail="Drill start and end time are required before attendance can be marked",
+        )
+    if not _drill_is_active(drill):
+        _refresh_drill_statuses(db)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Attendance can only be marked while the drill is active",
         )
 
     participation = db.scalar(
@@ -165,6 +252,7 @@ def mark_attendance(
 
     participation.attendance = bool(payload.attendance)
     participation.completion_status = "attended" if participation.attendance else "missed"
+    participation.attended_at = datetime.utcnow() if participation.attendance else None
     db.commit()
     db.refresh(participation)
     return participation
@@ -180,12 +268,18 @@ def submit_completion(
     drill = db.get(SafetyDrill, drill_id)
     if not drill:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found")
-    if not current_user.ship_id or current_user.ship_id != drill.ship_id:
+    if not current_user.all_ships and current_user.ship_id != drill.ship_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
-    if date.today() != drill.scheduled_date:
+    if drill.scheduled_time is None or drill.end_time is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Completion can only be submitted on the scheduled date",
+            detail="Drill start and end time are required before completion can be submitted",
+        )
+    if not _drill_is_active(drill):
+        _refresh_drill_statuses(db)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Completion can only be submitted while the drill is active",
         )
 
     participation = db.scalar(
@@ -207,8 +301,12 @@ def submit_completion(
     if payload.completed:
         participation.attendance = True
         participation.completion_status = "completed"
+        participation.attended_at = participation.attended_at or datetime.utcnow()
+        participation.completed_at = datetime.utcnow()
+        drill.status = "completed"
     else:
         participation.completion_status = "missed"
+        participation.completed_at = None
     db.commit()
     db.refresh(participation)
     return participation

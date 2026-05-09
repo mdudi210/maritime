@@ -5,8 +5,6 @@ import {
   getMaintenanceTasks,
   getSafetyDrills,
   getTaskComments,
-  markDrillAttendance,
-  submitDrillCompletion,
   updateMaintenanceStatus
 } from "../api/maritimeApi";
 import type { MaintenanceTask, SafetyDrill, TaskComment } from "../types/api";
@@ -18,7 +16,6 @@ export default function CrewDashboardPage() {
   const [taskForComments, setTaskForComments] = useState<MaintenanceTask | null>(null);
   const [taskComments, setTaskComments] = useState<TaskComment[] | null>(null);
   const [newTaskComment, setNewTaskComment] = useState("");
-  const [busy, setBusy] = useState(false);
 
   const reload = async () => {
     setError(null);
@@ -34,8 +31,6 @@ export default function CrewDashboardPage() {
   useEffect(() => {
     reload();
   }, []);
-
-  const todayIso = new Date().toISOString().slice(0, 10);
 
   return (
     <AppShell>
@@ -57,7 +52,10 @@ export default function CrewDashboardPage() {
                 <article className="row-card" key={task.id}>
                   <div>
                     <strong>{task.title}</strong>
-                    <span>Due {task.due_date}</span>
+                    <span>Due {task.due_date}{task.due_time ? ` · Start ${task.due_time.slice(0, 5)}` : ""}</span>
+                    {task.completed_at ? (
+                      <span>Completed {new Date(task.completed_at).toLocaleString()}</span>
+                    ) : null}
                   </div>
                   <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                     <button
@@ -95,54 +93,17 @@ export default function CrewDashboardPage() {
           </section>
 
           <section className="panel">
-            <h2>Upcoming drills</h2>
+            <h2>Scheduled drills</h2>
             <div className="list">
               {drills.map((drill) => (
                 <article className="row-card" key={drill.id}>
                   <div>
                     <strong>{drill.drill_type}</strong>
-                    <span>Scheduled {drill.scheduled_date}</span>
-                  </div>
-                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                    <button
-                      className="ghost-button"
-                      disabled={drill.scheduled_date !== todayIso || busy}
-                      onClick={async () => {
-                        try {
-                          setBusy(true);
-                          await markDrillAttendance(drill.id, true);
-                          await reload();
-                        } catch (err) {
-                          setError(err instanceof Error ? err.message : "Failed to mark attendance");
-                        } finally {
-                          setBusy(false);
-                        }
-                      }}
-                    >
-                      Mark attendance
-                    </button>
-                    <button
-                      className="ghost-button"
-                      disabled={drill.scheduled_date !== todayIso || busy}
-                      onClick={async () => {
-                        try {
-                          setBusy(true);
-                          await submitDrillCompletion(drill.id, true);
-                          await reload();
-                        } catch (err) {
-                          setError(err instanceof Error ? err.message : "Failed to submit completion");
-                        } finally {
-                          setBusy(false);
-                        }
-                      }}
-                    >
-                      Submit completion
-                    </button>
-                    <span className="status-pill">{drill.status}</span>
+                    <span>Scheduled {drill.scheduled_date}{drill.scheduled_time ? ` · Start ${drill.scheduled_time.slice(0, 5)}` : ""}{drill.end_time ? ` · End ${drill.end_time.slice(0, 5)}` : ""}</span>
                   </div>
                 </article>
               ))}
-              {drills.length === 0 ? <p className="notice">No upcoming drills.</p> : null}
+              {drills.length === 0 ? <p className="notice">No scheduled drills.</p> : null}
             </div>
           </section>
         </section>
@@ -153,7 +114,11 @@ export default function CrewDashboardPage() {
               <header className="modal-header">
                 <div>
                   <strong>{taskForComments.title}</strong>
-                  <span>Due {taskForComments.due_date}</span>
+                  <span>
+                    Due {taskForComments.due_date}
+                    {taskForComments.due_time ? ` · Start ${taskForComments.due_time.slice(0, 5)}` : ""}
+                    {taskForComments.completed_at ? ` · Completed ${new Date(taskForComments.completed_at).toLocaleString()}` : ""}
+                  </span>
                 </div>
                 <button className="ghost-button" onClick={() => setTaskForComments(null)}>Close</button>
               </header>
@@ -202,4 +167,3 @@ export default function CrewDashboardPage() {
     </AppShell>
   );
 }
-

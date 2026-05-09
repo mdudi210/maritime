@@ -7,11 +7,12 @@ from app.api.deps import get_current_user, verify_csrf
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.auth import LoginRequest, LoginResponse, MessageResponse, UserSummary
+from app.schemas.auth import ChangePasswordRequest, LoginRequest, LoginResponse, MessageResponse, UserSummary
 from app.services.auth_service import (
     AuthService,
     InactiveUserError,
     InvalidCredentialsError,
+    PasswordMismatchError,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -61,6 +62,19 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
     except InvalidCredentialsError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
     return MessageResponse(message="Token refreshed")
+
+
+@router.post("/change-password", response_model=UserSummary, dependencies=[Depends(verify_csrf)])
+def change_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserSummary:
+    try:
+        user = AuthService(db).change_password(current_user, payload)
+    except PasswordMismatchError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return UserSummary.model_validate(user)
 
 
 @router.post("/logout", response_model=MessageResponse, dependencies=[Depends(verify_csrf)])

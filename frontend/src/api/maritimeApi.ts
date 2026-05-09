@@ -38,6 +38,10 @@ export function createShip(payload: { name: string; imo_number?: string; current
   return apiRequest<Ship>("/ships", { method: "POST", body: JSON.stringify(payload) }, true);
 }
 
+export function updateShip(id: number, payload: { current_port?: string | null; status?: string }) {
+  return apiRequest<Ship>(`/ships/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, true);
+}
+
 export function getMaintenanceTasks(shipId?: number | "all") {
   return apiRequest<MaintenanceTask[]>(withShip("/maintenance", shipId));
 }
@@ -62,7 +66,10 @@ export function createMaintenanceTask(payload: {
   description?: string;
   ship_id: number;
   assigned_to_id?: number;
+  assigned_to_ids?: number[];
+  assign_all_crew?: boolean;
   due_date: string;
+  due_time: string;
 }) {
   return apiRequest<MaintenanceTask>("/maintenance", { method: "POST", body: JSON.stringify(payload) }, true);
 }
@@ -72,6 +79,10 @@ export function updateMaintenanceStatus(id: number, status: MaintenanceTask["sta
     method: "PATCH",
     body: JSON.stringify({ status })
   }, true);
+}
+
+export function deleteMaintenanceTask(id: number) {
+  return apiRequest<{ message: string }>(`/maintenance/${id}`, { method: "DELETE" }, true);
 }
 
 export function getTaskComments(taskId: number) {
@@ -92,7 +103,7 @@ export function getSafetyDrills(shipId?: number | "all") {
 
 export function getSafetyDrillsFiltered(filters: {
   shipId?: number | "all";
-  status?: "scheduled" | "completed" | "missed" | "all";
+  status?: "scheduled" | "active" | "completed" | "missed" | "all";
   scheduled_from?: string;
   scheduled_to?: string;
 }) {
@@ -105,19 +116,23 @@ export function getSafetyDrillsFiltered(filters: {
   return apiRequest<SafetyDrill[]>(params.toString() ? joined : base);
 }
 
-export function createSafetyDrill(payload: { drill_type: string; ship_id: number; scheduled_date: string }) {
+export function createSafetyDrill(payload: { drill_type: string; ship_id: number; scheduled_date: string; scheduled_time: string; end_time: string }) {
   return apiRequest<SafetyDrill>("/drills", { method: "POST", body: JSON.stringify(payload) }, true);
 }
 
 export function updateSafetyDrill(
   drillId: number,
-  payload: Partial<Pick<SafetyDrill, "drill_type" | "scheduled_date" | "status">>
+  payload: Partial<Pick<SafetyDrill, "drill_type" | "scheduled_date" | "scheduled_time" | "end_time" | "status">>
 ) {
   return apiRequest<SafetyDrill>(
     `/drills/${drillId}`,
     { method: "PATCH", body: JSON.stringify(payload) },
     true
   );
+}
+
+export function deleteSafetyDrill(drillId: number) {
+  return apiRequest<{ message: string }>(`/drills/${drillId}`, { method: "DELETE" }, true);
 }
 
 export function getDrillAttendance(drillId: number) {
@@ -154,6 +169,30 @@ export function createUser(payload: {
   password: string;
   role: "admin" | "crew";
   ship_id?: number | null;
+  all_ships?: boolean;
 }) {
   return apiRequest<UserSummary>("/users", { method: "POST", body: JSON.stringify(payload) }, true);
+}
+
+export function updateUser(id: number, payload: {
+  email?: string;
+  username?: string;
+  role?: "admin" | "crew";
+  ship_id?: number | null;
+  all_ships?: boolean;
+  is_active?: boolean;
+}) {
+  return apiRequest<UserSummary>(`/users/${id}`, { method: "PATCH", body: JSON.stringify(payload) }, true);
+}
+
+export function updateProfile(payload: { username?: string }) {
+  return apiRequest<UserSummary>("/users/me", { method: "PATCH", body: JSON.stringify(payload) }, true);
+}
+
+export function resetUserPassword(id: number, temporaryPassword: string) {
+  return apiRequest<UserSummary>(
+    `/users/${id}/reset-password`,
+    { method: "POST", body: JSON.stringify({ temporary_password: temporaryPassword }) },
+    true
+  );
 }

@@ -124,6 +124,21 @@ button {
   color: #17212b;
 }
 
+.text-button {
+  border: 0;
+  background: transparent;
+  color: #17212b;
+  font-weight: 800;
+  min-height: auto;
+  padding: 0;
+  text-align: left;
+}
+
+.danger-button {
+  background: #fff1f1;
+  color: #b42318;
+}
+
 .full {
   width: 100%;
 }
@@ -151,6 +166,11 @@ select {
   color: #17212b;
 }
 
+select[multiple] {
+  min-height: 132px;
+  padding: 8px 12px;
+}
+
 .notice {
   color: #0d6b63;
 }
@@ -160,9 +180,10 @@ select {
 }
 
 .shell {
-  min-height: 100vh;
+  height: 100vh;
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
+  overflow: hidden;
 }
 
 .sidebar {
@@ -172,6 +193,8 @@ select {
   display: flex;
   flex-direction: column;
   gap: 28px;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .brand strong,
@@ -214,6 +237,8 @@ nav a.active {
 
 .workspace {
   padding: 32px;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .page-header {
@@ -241,6 +266,10 @@ p {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 20px;
+}
+
+.compact-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .filter-bar {
@@ -287,6 +316,14 @@ p {
   grid-template-columns: 0.8fr 1fr 1fr;
 }
 
+.attendance-filters {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.profile-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .inline-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -295,6 +332,10 @@ p {
 }
 
 .inline-form.compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.inline-form.users-form {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
@@ -378,6 +419,29 @@ p {
   font-size: 13px;
 }
 
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.user-row {
+  align-items: flex-start;
+}
+
+.user-controls {
+  display: grid;
+  grid-template-columns: auto 130px 180px 140px 104px;
+  gap: 10px;
+  align-items: center;
+}
+
+.user-controls > span:nth-last-child(2) {
+  text-align: right;
+}
+
 .status-pill {
   border-radius: 999px;
   background: #eef3f2;
@@ -395,6 +459,18 @@ p {
   display: flex;
   gap: 16px;
   max-width: 760px;
+}
+
+.password-panel {
+  margin-top: 16px;
+}
+
+.password-panel > div {
+  flex: 1;
+}
+
+.reset-page .auth-hero h1 {
+  max-width: 640px;
 }
 
 .loading {
@@ -424,6 +500,10 @@ p {
   padding: 18px;
 }
 
+.modal-narrow {
+  width: min(520px, 100%);
+}
+
 .modal-header {
   display: flex;
   align-items: start;
@@ -443,6 +523,7 @@ p {
   .auth-page,
   .shell,
   .metrics-grid,
+  .compact-metrics,
   .filter-bar,
   .admin-tools,
   .content-grid {
@@ -463,5 +544,18 @@ p {
 
   .inline-form {
     grid-template-columns: 1fr;
+  }
+
+  .inline-form.users-form,
+  .user-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .row-actions {
+    justify-content: flex-start;
+  }
+
+  .user-controls > span:nth-last-child(2) {
+    text-align: left;
   }
 }

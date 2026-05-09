@@ -5,7 +5,10 @@ import CrewDashboardPage from "./pages/CrewDashboardPage";
 import DashboardPage from "./pages/DashboardPage";
 import DrillManagementPage from "./pages/DrillManagementPage";
 import MaintenanceManagementPage from "./pages/MaintenanceManagementPage";
+import ProfilePage from "./pages/ProfilePage";
 import SecurityPage from "./pages/SecurityPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import UsersPage from "./pages/UsersPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
@@ -53,10 +56,34 @@ export default function App() {
         }
       />
       <Route
+        path="/users"
+        element={
+          <ProtectedRoute role="admin">
+            <UsersPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/security"
         element={
           <ProtectedRoute>
             <SecurityPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          <ProtectedRoute>
+            <ResetPasswordPage />
           </ProtectedRoute>
         }
       />

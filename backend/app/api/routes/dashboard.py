@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_role
@@ -22,14 +22,56 @@ def _percent(part: int, total: int) -> float:
     return round((part / total) * 100, 2) if total else 100.0
 
 
+def _auto_complete_due_drills(db: Session) -> None:
+    now = datetime.now()
+    due_drills = db.scalars(
+        select(SafetyDrill).where(
+            SafetyDrill.status.in_(["scheduled", "active"]),
+            or_(
+                SafetyDrill.scheduled_date < now.date(),
+                (SafetyDrill.scheduled_date == now.date()) & (SafetyDrill.end_time <= now.time()),
+            ),
+        )
+    ).all()
+    active_drills = db.scalars(
+        select(SafetyDrill).where(
+            SafetyDrill.status == "scheduled",
+            SafetyDrill.scheduled_date == now.date(),
+            SafetyDrill.scheduled_time <= now.time(),
+            SafetyDrill.end_time >= now.time(),
+        )
+    ).all()
+    if not due_drills and not active_drills:
+        return
+    for drill in due_drills:
+        drill.status = "completed"
+    for drill in active_drills:
+        drill.status = "active"
+    db.commit()
+
+
 @router.get("/compliance", response_model=DashboardMetrics)
 def compliance(
     ship_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin", "crew")),
 ):
+    _auto_complete_due_drills(db)
     today = date.today()
-    effective_ship_id = current_user.ship_id if current_user.role == "crew" and current_user.ship_id else ship_id
+    if current_user.role in {"admin", "crew"} and not current_user.all_ships and not current_user.ship_id:
+        return DashboardMetrics(
+            ships=0,
+            maintenance_total=0,
+            maintenance_completed=0,
+            maintenance_overdue=0,
+            drills_total=0,
+            drills_completed=0,
+            drills_missed=0,
+            maintenance_compliance_percent=100.0,
+            drill_compliance_percent=100.0,
+            drill_participation_percent=100.0,
+        )
+    effective_ship_id = current_user.ship_id if current_user.role in {"admin", "crew"} and not current_user.all_ships and current_user.ship_id else ship_id
     ship_query = select(func.count()).select_from(Ship)
     task_total_query = select(func.count()).select_from(MaintenanceTask)
     task_completed_query = select(func.count()).select_from(MaintenanceTask).where(MaintenanceTask.status == "completed")
@@ -107,8 +149,11 @@ def compliance_items(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin", "crew")),
 ):
+    _auto_complete_due_drills(db)
     today = date.today()
-    effective_ship_id = current_user.ship_id if current_user.role == "crew" and current_user.ship_id else ship_id
+    if current_user.role in {"admin", "crew"} and not current_user.all_ships and not current_user.ship_id:
+        return ComplianceItems(pending_maintenance=[], overdue_maintenance=[], missed_drills=[])
+    effective_ship_id = current_user.ship_id if current_user.role in {"admin", "crew"} and not current_user.all_ships and current_user.ship_id else ship_id
     safe_limit = min(max(limit, 1), 200)
 
     pending_tasks_query = select(MaintenanceTask).where(MaintenanceTask.status != "completed").order_by(MaintenanceTask.due_date)

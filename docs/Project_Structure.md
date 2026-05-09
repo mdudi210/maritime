@@ -63,6 +63,7 @@ Maritime/
 - JWT and password utilities belong in `core/security.py`.
 - SQLAlchemy models belong in `models`.
 - Request and response validation belongs in `schemas`.
+- Lightweight startup migrations in `core/database.py` cover MVP schema additions such as password reset flags, task/drill time fields, and completion timestamps.
 
 ## Frontend Boundaries
 
@@ -71,3 +72,4 @@ Maritime/
 - Shared authenticated layout belongs in `src/components`.
 - Route-level screens belong in `src/pages`.
 - API response shapes belong in `src/types`.
+- Admin user management, first-login password reset, maintenance completion metadata, and drill attendance details are implemented as route-level screens backed by `src/api`.

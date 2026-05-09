@@ -49,8 +49,16 @@ def require_role(*roles: str):
     allowed = {role.lower() for role in roles}
 
     def dependency(current_user: User = Depends(get_current_user)) -> User:
+        if current_user.password_reset_required:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Password reset required")
         if current_user.role.lower() not in allowed:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
         return current_user
 
     return dependency
+
+
+def require_password_ready(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.password_reset_required:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Password reset required")
+    return current_user

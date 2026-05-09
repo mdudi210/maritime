@@ -19,7 +19,7 @@ from app.core.security import (
 )
 from app.models.session import UserSession
 from app.models.user import User
-from app.schemas.auth import RegisterRequest
+from app.schemas.auth import ChangePasswordRequest, RegisterRequest
 
 
 class InvalidCredentialsError(Exception):
@@ -31,6 +31,10 @@ class InactiveUserError(Exception):
 
 
 class UserAlreadyExistsError(Exception):
+    pass
+
+
+class PasswordMismatchError(Exception):
     pass
 
 
@@ -91,8 +95,32 @@ class AuthService:
             password_hash=password_hash,
             password_salt=password_salt,
             role=payload.role,
-            ship_id=payload.ship_id if payload.role == "crew" else None,
+            ship_id=payload.ship_id if not payload.all_ships else None,
+            all_ships=payload.all_ships,
+            password_reset_required=True,
         )
+        self.db.add(user)
+        self.db.commit()
+        self.db.refresh(user)
+        return user
+
+    def change_password(self, user: User, payload: ChangePasswordRequest) -> User:
+        if not verify_password(payload.current_password, user.password_hash, user.password_salt):
+            raise PasswordMismatchError("Current password is incorrect")
+        user.password_hash, user.password_salt = hash_password(payload.new_password)
+        user.password_reset_required = False
+        self.db.add(user)
+        self.db.commit()
+        self.db.refresh(user)
+        return user
+
+    def reset_password(self, user: User, temporary_password: str) -> User:
+        user.password_hash, user.password_salt = hash_password(temporary_password)
+        user.password_reset_required = True
+        self.db.query(UserSession).filter(
+            UserSession.user_id == user.id,
+            UserSession.revoked_at.is_(None),
+        ).update({"revoked_at": datetime.utcnow()}, synchronize_session=False)
         self.db.add(user)
         self.db.commit()
         self.db.refresh(user)

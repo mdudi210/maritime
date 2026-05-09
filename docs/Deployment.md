@@ -30,7 +30,7 @@ Important production changes:
 
 This repository is ready for a small single-node deployment with Docker Compose. For a cloud deployment, run the backend container behind HTTPS, serve the frontend through Nginx or a static host, and use a managed PostgreSQL database.
 
-The current backend creates tables on startup for MVP speed. For a longer-lived production system, add Alembic migrations before making schema changes.
+The current backend creates tables on startup for MVP speed and applies lightweight column additions for the local MVP database. For a longer-lived production system, replace those startup migrations with Alembic before making schema changes.
 
 ## GitHub Actions
 

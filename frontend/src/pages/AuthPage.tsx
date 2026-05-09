@@ -14,7 +14,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState("Admin@12345");
 
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={user.password_reset_required ? "/reset-password" : "/dashboard"} replace />;
   }
 
   const onSignin = async (event: FormEvent) => {
@@ -23,8 +23,8 @@ export default function AuthPage() {
     setError(null);
     try {
       await login({ email_or_username: emailOrUsername.trim(), password });
-      await reloadUser();
-      navigate("/dashboard", { replace: true });
+      const current = await reloadUser();
+      navigate(current?.password_reset_required ? "/reset-password" : "/dashboard", { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Sign in failed");
     } finally {

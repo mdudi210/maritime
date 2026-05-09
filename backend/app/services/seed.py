@@ -45,6 +45,9 @@ def seed_initial_data(db: Session) -> None:
         password=settings.SEED_ADMIN_PASSWORD,
         role="admin",
     )
+    admin = db.scalar(select(User).where(User.email == settings.SEED_ADMIN_EMAIL))
+    if admin:
+        admin.all_ships = True
     _ensure_user(
         db,
         email=settings.SEED_CREW_EMAIL,

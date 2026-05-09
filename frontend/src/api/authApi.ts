@@ -16,6 +16,13 @@ export function refresh() {
   return apiRequest<{ message: string }>("/auth/refresh", { method: "POST" }, true);
 }
 
+export function changePassword(payload: { current_password: string; new_password: string }) {
+  return apiRequest<UserSummary>("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  }, true);
+}
+
 export function logout() {
   return apiRequest<{ message: string }>("/auth/logout", { method: "POST" }, true);
 }

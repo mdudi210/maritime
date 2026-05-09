@@ -1,4 +1,4 @@
-import { Anchor, ClipboardCheck, LayoutDashboard, LogOut, ShieldCheck, ShieldPlus, Wrench } from "lucide-react";
+import { Anchor, ClipboardCheck, LayoutDashboard, LogOut, ShieldCheck, ShieldPlus, UserCircle, Users, Wrench } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { logout, logoutAll } from "../api/authApi";
 import { useAuth } from "../auth/AuthContext";
@@ -47,10 +47,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <NavLink to="/attendance">
                 <ClipboardCheck size={18} /> Attendance
               </NavLink>
+              <NavLink to="/users">
+                <Users size={18} /> Users
+              </NavLink>
             </>
           ) : null}
           <NavLink to="/security">
             <ShieldCheck size={18} /> Session
+          </NavLink>
+          <NavLink to="/profile">
+            <UserCircle size={18} /> Profile
           </NavLink>
         </nav>
         <div className="sidebar-footer">

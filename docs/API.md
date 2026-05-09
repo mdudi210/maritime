@@ -33,6 +33,10 @@ Requires CSRF header. Revokes the current refresh session and clears cookies.
 
 Requires CSRF header and a valid access cookie. Revokes all sessions for the current user.
 
+`POST /auth/change-password`
+
+Requires CSRF header. Lets the signed-in user change their password and clears first-login reset requirements.
+
 There is no public registration endpoint. Admins create users with `POST /users`.
 
 ## Users
@@ -54,6 +58,16 @@ Admin only. Requires CSRF header.
   "ship_id": 1
 }
 ```
+
+New users are created with `password_reset_required=true` and must change the temporary password before accessing operational screens.
+
+`PATCH /users/{user_id}`
+
+Admin only. Updates role and crew ship assignment.
+
+`POST /users/{user_id}/reset-password`
+
+Admin only. Sets a temporary password, revokes active sessions for that account, and forces password reset on next login.
 
 ## Maritime Resources
 
@@ -82,9 +96,19 @@ Additional filters:
 
 Admin only. Creates a maintenance task.
 
+```json
+{
+  "title": "Inspect lifeboat davits",
+  "ship_id": 1,
+  "assigned_to_id": 2,
+  "due_date": "2026-05-15",
+  "due_time": "14:30"
+}
+```
+
 `PATCH /maintenance/{task_id}`
 
-Admins can update task fields. Crew users can update status on assigned tasks.
+Admins can update task fields. Crew users can update status on assigned tasks. When status becomes `completed`, responses include `completed_at` and `completed_by_id`.
 
 `GET /drills`
 
@@ -99,9 +123,34 @@ Additional filters:
 
 Admin only. Schedules a drill.
 
+```json
+{
+  "drill_type": "Fire drill",
+  "ship_id": 1,
+  "scheduled_date": "2026-05-15",
+  "scheduled_time": "09:15"
+}
+```
+
 `PATCH /drills/{drill_id}`
 
 Admin only. Updates a drill.
+
+`DELETE /drills/{drill_id}`
+
+Admin only. Deletes a drill and its attendance rows.
+
+`GET /drills/{drill_id}/attendance`
+
+Admin and assigned crew. Returns attendance rows with `attended_at` and `completed_at` timestamps when available.
+
+`POST /drills/{drill_id}/attendance/mark`
+
+Crew only. Marks attendance on the scheduled date and records `attended_at`.
+
+`POST /drills/{drill_id}/complete`
+
+Crew only. Submits completion on the scheduled date and records `completed_at`.
 
 `GET /dashboard/compliance`
 

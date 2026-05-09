@@ -26,6 +26,7 @@ Main responsibilities:
 - Enforce CSRF checks on state-changing authenticated calls.
 - Enforce role-based access.
 - Expose REST endpoints for ships, maintenance, drills, and compliance metrics.
+- Track task completion metadata and drill attendance/completion timestamps.
 
 Key modules:
 
@@ -59,6 +60,8 @@ Key modules:
 - `components/ProtectedRoute.tsx`: route guard.
 - `components/AppShell.tsx`: authenticated layout and logout controls.
 - `pages/DashboardPage.tsx`: compliance, maintenance, and drill workflows.
+- `pages/UsersPage.tsx`: admin user list, creation, role/ship updates, and password resets.
+- `pages/ResetPasswordPage.tsx`: first-login password reset gate.
 
 ## Authentication Flow
 
@@ -100,6 +103,16 @@ Frontend sends POST /api/auth/logout-all with X-CSRF-Token
   -> Backend clears auth cookies
 ```
 
+First-login password reset:
+
+```text
+Admin creates a user or resets a password
+  -> Backend stores the temporary password and sets password_reset_required=true
+  -> User logs in with temporary password
+  -> Frontend routes to /reset-password
+  -> Backend blocks operational routes until /api/auth/change-password succeeds
+```
+
 ## Data Model
 
 Core tables:
@@ -114,11 +127,13 @@ Core tables:
 
 Users include optional `ship_id` assignment. Crew users can be scoped to a ship; admins can filter the fleet or drill into one vessel.
 
+Maintenance tasks include `due_date`, required `due_time`, `completed_by_id`, and `completed_at`. Safety drills include `scheduled_date`, required `scheduled_time`, and child `drill_participation` rows with `attended_at` and `completed_at`.
+
 ## Deployment
 
 Docker Compose starts:
 
-- `frontend`: static React build served by Nginx on port `8080`.
+- `frontend`: static React build served by Nginx on port `5173` in local Compose.
 - `backend`: FastAPI on port `8000`.
 - `postgres`: PostgreSQL on port `5432`.
 
