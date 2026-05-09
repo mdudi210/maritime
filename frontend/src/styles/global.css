@@ -124,6 +124,21 @@ button {
   color: #17212b;
 }
 
+.text-button {
+  border: 0;
+  background: transparent;
+  color: #17212b;
+  font-weight: 800;
+  min-height: auto;
+  padding: 0;
+  text-align: left;
+}
+
+.danger-button {
+  background: #fff1f1;
+  color: #b42318;
+}
+
 .full {
   width: 100%;
 }
@@ -151,6 +166,11 @@ select {
   color: #17212b;
 }
 
+select[multiple] {
+  min-height: 132px;
+  padding: 8px 12px;
+}
+
 .notice {
   color: #0d6b63;
 }
@@ -160,9 +180,10 @@ select {
 }
 
 .shell {
-  min-height: 100vh;
+  height: 100vh;
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
+  overflow: hidden;
 }
 
 .sidebar {
@@ -172,6 +193,8 @@ select {
   display: flex;
   flex-direction: column;
   gap: 28px;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .brand strong,
@@ -214,6 +237,8 @@ nav a.active {
 
 .workspace {
   padding: 32px;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .page-header {
@@ -241,6 +266,10 @@ p {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 20px;
+}
+
+.compact-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .filter-bar {
@@ -287,6 +316,14 @@ p {
   grid-template-columns: 0.8fr 1fr 1fr;
 }
 
+.attendance-filters {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.profile-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .inline-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -295,6 +332,10 @@ p {
 }
 
 .inline-form.compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.inline-form.users-form {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
@@ -326,10 +367,79 @@ p {
   text-align: left;
 }
 
+.row-card.risk {
+  border-color: #f3c2c2;
+  background: #fff6f6;
+}
+
+.risk-banner h2 {
+  margin-bottom: 10px;
+}
+
+.chart {
+  display: grid;
+  gap: 10px;
+}
+
+.chart-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 56px;
+  gap: 10px;
+  align-items: center;
+}
+
+.chart-label {
+  font-weight: 700;
+  color: #33414b;
+  font-size: 13px;
+}
+
+.chart-track {
+  height: 10px;
+  background: #eef3f2;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.chart-fill {
+  height: 100%;
+  background: #0d6b63;
+}
+
+.chart-value {
+  font-weight: 800;
+  font-size: 13px;
+  color: #33414b;
+  text-align: right;
+}
+
 .row-card span {
   display: block;
   color: #667782;
   font-size: 13px;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.user-row {
+  align-items: flex-start;
+}
+
+.user-controls {
+  display: grid;
+  grid-template-columns: auto auto 150px 96px 96px 132px;
+  gap: 10px;
+  align-items: center;
+}
+
+.user-controls > span:nth-last-child(2) {
+  text-align: right;
 }
 
 .status-pill {
@@ -338,6 +448,11 @@ p {
   color: #0d6b63 !important;
   padding: 6px 10px;
   text-transform: capitalize;
+}
+
+.muted-pill {
+  background: #f1f3f4;
+  color: #667782 !important;
 }
 
 .ship-row.selected {
@@ -351,16 +466,69 @@ p {
   max-width: 760px;
 }
 
+.password-panel {
+  margin-top: 16px;
+}
+
+.password-panel > div {
+  flex: 1;
+}
+
+.reset-page .auth-hero h1 {
+  max-width: 640px;
+}
+
 .loading {
   min-height: 100vh;
   display: grid;
   place-items: center;
 }
 
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 42, 48, 0.55);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  z-index: 50;
+}
+
+.modal {
+  width: min(760px, 100%);
+  max-height: min(80vh, 720px);
+  overflow: auto;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #dde5e4;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+  padding: 18px;
+}
+
+.modal-narrow {
+  width: min(520px, 100%);
+}
+
+.modal-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.modal-header span {
+  display: block;
+  color: #667782;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
 @media (max-width: 900px) {
   .auth-page,
   .shell,
   .metrics-grid,
+  .compact-metrics,
   .filter-bar,
   .admin-tools,
   .content-grid {
@@ -381,5 +549,18 @@ p {
 
   .inline-form {
     grid-template-columns: 1fr;
+  }
+
+  .inline-form.users-form,
+  .user-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .row-actions {
+    justify-content: flex-start;
+  }
+
+  .user-controls > span:nth-last-child(2) {
+    text-align: left;
   }
 }

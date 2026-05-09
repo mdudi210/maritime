@@ -33,11 +33,39 @@ def init_db() -> None:
 
 
 def _apply_lightweight_sqlite_migrations() -> None:
-    if not settings.DATABASE_URL.startswith("sqlite"):
-        return
     with engine.begin() as connection:
         inspector = inspect(connection)
         if "users" in inspector.get_table_names():
             columns = {column["name"] for column in inspector.get_columns("users")}
             if "ship_id" not in columns:
                 connection.execute(text("ALTER TABLE users ADD COLUMN ship_id INTEGER"))
+            if "all_ships" not in columns:
+                if settings.DATABASE_URL.startswith("sqlite"):
+                    connection.execute(text("ALTER TABLE users ADD COLUMN all_ships BOOLEAN NOT NULL DEFAULT 0"))
+                else:
+                    connection.execute(text("ALTER TABLE users ADD COLUMN all_ships BOOLEAN NOT NULL DEFAULT FALSE"))
+            if "password_reset_required" not in columns:
+                if settings.DATABASE_URL.startswith("sqlite"):
+                    connection.execute(text("ALTER TABLE users ADD COLUMN password_reset_required BOOLEAN NOT NULL DEFAULT 0"))
+                else:
+                    connection.execute(text("ALTER TABLE users ADD COLUMN password_reset_required BOOLEAN NOT NULL DEFAULT FALSE"))
+        if "maintenance_tasks" in inspector.get_table_names():
+            columns = {column["name"] for column in inspector.get_columns("maintenance_tasks")}
+            if "due_time" not in columns:
+                connection.execute(text("ALTER TABLE maintenance_tasks ADD COLUMN due_time TIME"))
+            if "completed_by_id" not in columns:
+                connection.execute(text("ALTER TABLE maintenance_tasks ADD COLUMN completed_by_id INTEGER"))
+            if "completed_at" not in columns:
+                connection.execute(text("ALTER TABLE maintenance_tasks ADD COLUMN completed_at TIMESTAMP"))
+        if "safety_drills" in inspector.get_table_names():
+            columns = {column["name"] for column in inspector.get_columns("safety_drills")}
+            if "scheduled_time" not in columns:
+                connection.execute(text("ALTER TABLE safety_drills ADD COLUMN scheduled_time TIME"))
+            if "end_time" not in columns:
+                connection.execute(text("ALTER TABLE safety_drills ADD COLUMN end_time TIME"))
+        if "drill_participation" in inspector.get_table_names():
+            columns = {column["name"] for column in inspector.get_columns("drill_participation")}
+            if "attended_at" not in columns:
+                connection.execute(text("ALTER TABLE drill_participation ADD COLUMN attended_at TIMESTAMP"))
+            if "completed_at" not in columns:
+                connection.execute(text("ALTER TABLE drill_participation ADD COLUMN completed_at TIMESTAMP"))

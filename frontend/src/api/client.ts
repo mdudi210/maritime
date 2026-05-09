@@ -1,6 +1,6 @@
 import { readCookie } from "../utils/cookies";
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
 export class ApiError extends Error {
   status: number;
@@ -31,6 +31,15 @@ function buildHeaders(input?: HeadersInit, includeCsrf = false): Headers {
 async function toApiError(response: Response): Promise<ApiError> {
   try {
     const payload = await response.json();
+    if (Array.isArray(payload.detail)) {
+      const message = payload.detail
+        .map((item: { loc?: string[]; msg?: string }) => {
+          const field = item.loc?.filter((part) => part !== "body").join(".");
+          return field ? `${field}: ${item.msg || "Invalid value"}` : item.msg || "Invalid value";
+        })
+        .join("; ");
+      return new ApiError(message || `Request failed (${response.status})`, response.status);
+    }
     return new ApiError(String(payload.detail || payload.message || "Request failed"), response.status);
   } catch {
     return new ApiError(`Request failed (${response.status})`, response.status);
@@ -45,6 +54,9 @@ export async function apiRequest<T>(path: string, init?: RequestInit, withCsrf =
   });
   if (!response.ok) {
     throw await toApiError(response);
+  }
+  if (response.status === 204) {
+    return undefined as T;
   }
   return (await response.json()) as T;
 }

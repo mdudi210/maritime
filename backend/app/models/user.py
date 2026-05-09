@@ -20,7 +20,9 @@ class User(Base):
     password_salt: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(20), nullable=False, default="crew")
     ship_id: Mapped[Optional[int]] = mapped_column(ForeignKey("ships.id"), nullable=True, index=True)
+    all_ships: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    password_reset_required: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
