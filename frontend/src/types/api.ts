@@ -25,6 +25,12 @@ export type DashboardMetrics = {
   drill_compliance_percent: number;
 };
 
+export type ComplianceItems = {
+  pending_maintenance: MaintenanceTask[];
+  overdue_maintenance: MaintenanceTask[];
+  missed_drills: SafetyDrill[];
+};
+
 export type Ship = {
   id: number;
   name: string;
@@ -45,6 +51,15 @@ export type MaintenanceTask = {
   updated_at: string;
 };
 
+export type TaskComment = {
+  id: number;
+  task_id: number;
+  user_id: number;
+  comment: string;
+  created_at: string;
+  user: { id: number; email: string; username: string };
+};
+
 export type SafetyDrill = {
   id: number;
   drill_type: string;
@@ -52,4 +67,13 @@ export type SafetyDrill = {
   scheduled_date: string;
   status: "scheduled" | "completed" | "missed";
   created_at: string;
+};
+
+export type DrillAttendanceEntry = {
+  id: number;
+  drill_id: number;
+  user_id: number;
+  attendance: boolean;
+  completion_status: string;
+  user: { id: number; email: string; username: string };
 };

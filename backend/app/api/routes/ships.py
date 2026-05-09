@@ -23,7 +23,9 @@ def list_ships(
     current_user: User = Depends(require_role("admin", "crew")),
 ):
     query = select(Ship).order_by(Ship.name)
-    if current_user.role == "crew" and current_user.ship_id:
+    if current_user.role == "crew":
+        if not current_user.ship_id:
+            return []
         query = query.where(Ship.id == current_user.ship_id)
     if search:
         query = query.where(Ship.name.ilike(f"%{search.strip()}%"))

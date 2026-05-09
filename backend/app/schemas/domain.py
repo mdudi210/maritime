@@ -49,6 +49,29 @@ class MaintenanceTaskRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class TaskCommentCreate(BaseModel):
+    comment: str = Field(min_length=1, max_length=2000)
+
+
+class TaskCommentUser(BaseModel):
+    id: int
+    email: str
+    username: str
+
+    model_config = {"from_attributes": True}
+
+
+class TaskCommentRead(BaseModel):
+    id: int
+    task_id: int
+    user_id: int
+    comment: str
+    created_at: datetime
+    user: TaskCommentUser
+
+    model_config = {"from_attributes": True}
+
+
 class SafetyDrillCreate(BaseModel):
     drill_type: str = Field(min_length=2, max_length=120)
     ship_id: int
@@ -82,3 +105,36 @@ class DashboardMetrics(BaseModel):
     drills_missed: int
     maintenance_compliance_percent: float
     drill_compliance_percent: float
+
+
+class DrillAttendanceMark(BaseModel):
+    attendance: bool = True
+
+
+class DrillCompletionSubmit(BaseModel):
+    completed: bool = True
+
+
+class DrillAttendanceUser(BaseModel):
+    id: int
+    email: str
+    username: str
+
+    model_config = {"from_attributes": True}
+
+
+class DrillAttendanceEntry(BaseModel):
+    id: int
+    drill_id: int
+    user_id: int
+    attendance: bool
+    completion_status: str
+    user: DrillAttendanceUser
+
+    model_config = {"from_attributes": True}
+
+
+class ComplianceItems(BaseModel):
+    pending_maintenance: list[MaintenanceTaskRead]
+    overdue_maintenance: list[MaintenanceTaskRead]
+    missed_drills: list[SafetyDrillRead]

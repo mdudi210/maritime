@@ -13,7 +13,7 @@ from app.models.drill import SafetyDrill
 from app.models.maintenance import MaintenanceTask
 from app.models.ship import Ship
 from app.models.user import User
-from app.schemas.domain import DashboardMetrics
+from app.schemas.domain import ComplianceItems, DashboardMetrics, MaintenanceTaskRead, SafetyDrillRead
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -79,4 +79,43 @@ def compliance(
         drills_missed=drills_missed,
         maintenance_compliance_percent=_percent(maintenance_completed, maintenance_total),
         drill_compliance_percent=_percent(drills_completed, drills_total),
+    )
+
+
+@router.get("/compliance/items", response_model=ComplianceItems)
+def compliance_items(
+    ship_id: Optional[int] = None,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin", "crew")),
+):
+    today = date.today()
+    effective_ship_id = current_user.ship_id if current_user.role == "crew" and current_user.ship_id else ship_id
+    safe_limit = min(max(limit, 1), 200)
+
+    pending_tasks_query = select(MaintenanceTask).where(MaintenanceTask.status != "completed").order_by(MaintenanceTask.due_date)
+    overdue_tasks_query = (
+        select(MaintenanceTask)
+        .where(MaintenanceTask.status != "completed", MaintenanceTask.due_date < today)
+        .order_by(MaintenanceTask.due_date)
+    )
+    missed_drills_query = (
+        select(SafetyDrill)
+        .where(SafetyDrill.status != "completed", SafetyDrill.scheduled_date < today)
+        .order_by(SafetyDrill.scheduled_date.desc())
+    )
+
+    if effective_ship_id:
+        pending_tasks_query = pending_tasks_query.where(MaintenanceTask.ship_id == effective_ship_id)
+        overdue_tasks_query = overdue_tasks_query.where(MaintenanceTask.ship_id == effective_ship_id)
+        missed_drills_query = missed_drills_query.where(SafetyDrill.ship_id == effective_ship_id)
+
+    pending = db.scalars(pending_tasks_query.limit(safe_limit)).all()
+    overdue = db.scalars(overdue_tasks_query.limit(safe_limit)).all()
+    missed = db.scalars(missed_drills_query.limit(safe_limit)).all()
+
+    return ComplianceItems(
+        pending_maintenance=[MaintenanceTaskRead.model_validate(t) for t in pending],
+        overdue_maintenance=[MaintenanceTaskRead.model_validate(t) for t in overdue],
+        missed_drills=[SafetyDrillRead.model_validate(d) for d in missed],
     )

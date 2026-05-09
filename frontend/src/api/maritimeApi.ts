@@ -1,4 +1,13 @@
-import type { DashboardMetrics, MaintenanceTask, SafetyDrill, Ship, UserSummary } from "../types/api";
+import type {
+  ComplianceItems,
+  DashboardMetrics,
+  DrillAttendanceEntry,
+  MaintenanceTask,
+  SafetyDrill,
+  Ship,
+  TaskComment,
+  UserSummary
+} from "../types/api";
 import { apiRequest } from "./client";
 
 function withShip(path: string, shipId?: number | "all") {
@@ -7,6 +16,10 @@ function withShip(path: string, shipId?: number | "all") {
 
 export function getDashboard(shipId?: number | "all") {
   return apiRequest<DashboardMetrics>(withShip("/dashboard/compliance", shipId));
+}
+
+export function getComplianceItems(shipId?: number | "all") {
+  return apiRequest<ComplianceItems>(withShip("/dashboard/compliance/items", shipId));
 }
 
 export function getShips(filters?: { search?: string; status?: string }) {
@@ -46,12 +59,55 @@ export function updateMaintenanceStatus(id: number, status: MaintenanceTask["sta
   }, true);
 }
 
+export function getTaskComments(taskId: number) {
+  return apiRequest<TaskComment[]>(`/maintenance/${taskId}/comments`);
+}
+
+export function addTaskComment(taskId: number, comment: string) {
+  return apiRequest<TaskComment>(
+    `/maintenance/${taskId}/comments`,
+    { method: "POST", body: JSON.stringify({ comment }) },
+    true
+  );
+}
+
 export function getSafetyDrills(shipId?: number | "all") {
   return apiRequest<SafetyDrill[]>(withShip("/drills", shipId));
 }
 
 export function createSafetyDrill(payload: { drill_type: string; ship_id: number; scheduled_date: string }) {
   return apiRequest<SafetyDrill>("/drills", { method: "POST", body: JSON.stringify(payload) }, true);
+}
+
+export function updateSafetyDrill(
+  drillId: number,
+  payload: Partial<Pick<SafetyDrill, "drill_type" | "scheduled_date" | "status">>
+) {
+  return apiRequest<SafetyDrill>(
+    `/drills/${drillId}`,
+    { method: "PATCH", body: JSON.stringify(payload) },
+    true
+  );
+}
+
+export function getDrillAttendance(drillId: number) {
+  return apiRequest<DrillAttendanceEntry[]>(`/drills/${drillId}/attendance`);
+}
+
+export function markDrillAttendance(drillId: number, attendance = true) {
+  return apiRequest<DrillAttendanceEntry>(
+    `/drills/${drillId}/attendance/mark`,
+    { method: "POST", body: JSON.stringify({ attendance }) },
+    true
+  );
+}
+
+export function submitDrillCompletion(drillId: number, completed = true) {
+  return apiRequest<DrillAttendanceEntry>(
+    `/drills/${drillId}/complete`,
+    { method: "POST", body: JSON.stringify({ completed }) },
+    true
+  );
 }
 
 export function getUsers(filters?: { role?: "admin" | "crew"; ship_id?: number }) {

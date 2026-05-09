@@ -326,6 +326,11 @@ p {
   text-align: left;
 }
 
+.row-card.risk {
+  border-color: #f3c2c2;
+  background: #fff6f6;
+}
+
 .row-card span {
   display: block;
   color: #667782;
@@ -355,6 +360,42 @@ p {
   min-height: 100vh;
   display: grid;
   place-items: center;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 42, 48, 0.55);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  z-index: 50;
+}
+
+.modal {
+  width: min(760px, 100%);
+  max-height: min(80vh, 720px);
+  overflow: auto;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #dde5e4;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+  padding: 18px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.modal-header span {
+  display: block;
+  color: #667782;
+  font-size: 13px;
+  margin-top: 4px;
 }
 
 @media (max-width: 900px) {

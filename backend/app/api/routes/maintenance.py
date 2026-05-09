@@ -8,9 +8,9 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_role, verify_csrf
 from app.core.database import get_db
-from app.models.maintenance import MaintenanceTask
+from app.models.maintenance import MaintenanceTask, TaskComment
 from app.models.user import User
-from app.schemas.domain import MaintenanceTaskCreate, MaintenanceTaskRead, MaintenanceTaskUpdate
+from app.schemas.domain import MaintenanceTaskCreate, MaintenanceTaskRead, MaintenanceTaskUpdate, TaskCommentCreate, TaskCommentRead
 
 router = APIRouter(prefix="/maintenance", tags=["maintenance"])
 
@@ -24,10 +24,7 @@ def list_tasks(
 ):
     query = select(MaintenanceTask).order_by(MaintenanceTask.due_date)
     if current_user.role == "crew":
-        if current_user.ship_id:
-            query = query.where(MaintenanceTask.ship_id == current_user.ship_id)
-        else:
-            query = query.where(MaintenanceTask.assigned_to_id == current_user.id)
+        query = query.where(MaintenanceTask.assigned_to_id == current_user.id)
     if ship_id:
         query = query.where(MaintenanceTask.ship_id == ship_id)
     if status_filter:
@@ -65,3 +62,36 @@ def update_task(
     db.commit()
     db.refresh(task)
     return task
+
+
+@router.get("/{task_id}/comments", response_model=list[TaskCommentRead])
+def list_comments(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    task = db.get(MaintenanceTask, task_id)
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    if current_user.role == "crew" and task.assigned_to_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+    return db.scalars(select(TaskComment).where(TaskComment.task_id == task_id).order_by(TaskComment.created_at)).all()
+
+
+@router.post("/{task_id}/comments", response_model=TaskCommentRead, dependencies=[Depends(verify_csrf)])
+def add_comment(
+    task_id: int,
+    payload: TaskCommentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    task = db.get(MaintenanceTask, task_id)
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    if current_user.role == "crew" and task.assigned_to_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+    comment = TaskComment(task_id=task_id, user_id=current_user.id, comment=payload.comment.strip())
+    db.add(comment)
+    db.commit()
+    db.refresh(comment)
+    return comment
