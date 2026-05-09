@@ -42,6 +42,21 @@ export function getMaintenanceTasks(shipId?: number | "all") {
   return apiRequest<MaintenanceTask[]>(withShip("/maintenance", shipId));
 }
 
+export function getMaintenanceTasksFiltered(filters: {
+  shipId?: number | "all";
+  status?: "pending" | "in_progress" | "completed" | "all";
+  due_from?: string;
+  due_to?: string;
+}) {
+  const params = new URLSearchParams();
+  if (filters.status && filters.status !== "all") params.set("status_filter", filters.status);
+  if (filters.due_from) params.set("due_from", filters.due_from);
+  if (filters.due_to) params.set("due_to", filters.due_to);
+  const base = withShip("/maintenance", filters.shipId);
+  const joined = `${base}${base.includes("?") ? "&" : "?"}${params.toString()}`;
+  return apiRequest<MaintenanceTask[]>(params.toString() ? joined : base);
+}
+
 export function createMaintenanceTask(payload: {
   title: string;
   description?: string;
@@ -73,6 +88,21 @@ export function addTaskComment(taskId: number, comment: string) {
 
 export function getSafetyDrills(shipId?: number | "all") {
   return apiRequest<SafetyDrill[]>(withShip("/drills", shipId));
+}
+
+export function getSafetyDrillsFiltered(filters: {
+  shipId?: number | "all";
+  status?: "scheduled" | "completed" | "missed" | "all";
+  scheduled_from?: string;
+  scheduled_to?: string;
+}) {
+  const params = new URLSearchParams();
+  if (filters.status && filters.status !== "all") params.set("status_filter", filters.status);
+  if (filters.scheduled_from) params.set("scheduled_from", filters.scheduled_from);
+  if (filters.scheduled_to) params.set("scheduled_to", filters.scheduled_to);
+  const base = withShip("/drills", filters.shipId);
+  const joined = `${base}${base.includes("?") ? "&" : "?"}${params.toString()}`;
+  return apiRequest<SafetyDrill[]>(params.toString() ? joined : base);
 }
 
 export function createSafetyDrill(payload: { drill_type: string; ship_id: number; scheduled_date: string }) {

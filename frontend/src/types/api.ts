@@ -23,6 +23,7 @@ export type DashboardMetrics = {
   drills_missed: number;
   maintenance_compliance_percent: number;
   drill_compliance_percent: number;
+  drill_participation_percent: number;
 };
 
 export type ComplianceItems = {

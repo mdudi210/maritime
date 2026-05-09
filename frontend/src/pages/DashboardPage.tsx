@@ -187,9 +187,21 @@ export default function DashboardPage() {
         <section className="metrics-grid">
           <Metric label="Ships" value={metrics?.ships ?? 0} />
           <Metric label="Maintenance compliance" value={`${metrics?.maintenance_compliance_percent ?? 0}%`} />
-          <Metric label="Drill compliance" value={`${metrics?.drill_compliance_percent ?? 0}%`} />
+          <Metric label="Drill participation" value={`${metrics?.drill_participation_percent ?? metrics?.drill_compliance_percent ?? 0}%`} />
           <Metric label="Open risks" value={(metrics?.maintenance_overdue ?? 0) + (metrics?.drills_missed ?? 0)} />
         </section>
+
+        {(metrics?.maintenance_overdue ?? 0) > 0 || (metrics?.drills_missed ?? 0) > 0 ? (
+          <section className="panel risk-banner">
+            <h2>Notifications</h2>
+            {(metrics?.maintenance_overdue ?? 0) > 0 ? (
+              <p className="error">You have {metrics?.maintenance_overdue} overdue maintenance task(s).</p>
+            ) : null}
+            {(metrics?.drills_missed ?? 0) > 0 ? (
+              <p className="error">You have {metrics?.drills_missed} missed drill(s).</p>
+            ) : null}
+          </section>
+        ) : null}
 
         <section className="content-grid" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
           <Panel title="Completed vs Pending">
@@ -207,6 +219,20 @@ export default function DashboardPage() {
               </div>
               <span className="status-pill">{metrics?.drills_missed ?? 0} missed</span>
             </article>
+            <article className="row-card">
+              <div>
+                <strong>Compliance charts</strong>
+                <span>Maintenance vs drill participation</span>
+              </div>
+              <span className="status-pill">Overview</span>
+            </article>
+            <div className="chart">
+              <ChartBar label="Maintenance" percent={metrics?.maintenance_compliance_percent ?? 0} />
+              <ChartBar
+                label="Drills"
+                percent={metrics?.drill_participation_percent ?? metrics?.drill_compliance_percent ?? 0}
+              />
+            </div>
           </Panel>
           <Panel title="Pending maintenance">
             {(complianceItems?.pending_maintenance ?? []).slice(0, 8).map((task) => (
@@ -540,5 +566,18 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
       <h2><CheckCircle2 size={18} /> {title}</h2>
       <div className="list">{children}</div>
     </section>
+  );
+}
+
+function ChartBar({ label, percent }: { label: string; percent: number }) {
+  const safe = Math.max(0, Math.min(100, percent));
+  return (
+    <div className="chart-row">
+      <span className="chart-label">{label}</span>
+      <div className="chart-track">
+        <div className="chart-fill" style={{ width: `${safe}%` }} />
+      </div>
+      <span className="chart-value">{safe}%</span>
+    </div>
   );
 }

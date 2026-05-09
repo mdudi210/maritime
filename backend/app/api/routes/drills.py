@@ -51,6 +51,8 @@ def _ensure_participation_rows(db: Session, drill: SafetyDrill) -> None:
 def list_drills(
     ship_id: Optional[int] = None,
     status_filter: Optional[str] = None,
+    scheduled_from: Optional[date] = None,
+    scheduled_to: Optional[date] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("admin", "crew")),
 ):
@@ -63,6 +65,10 @@ def list_drills(
         query = query.where(SafetyDrill.ship_id == ship_id)
     if status_filter:
         query = query.where(SafetyDrill.status == status_filter)
+    if scheduled_from:
+        query = query.where(SafetyDrill.scheduled_date >= scheduled_from)
+    if scheduled_to:
+        query = query.where(SafetyDrill.scheduled_date <= scheduled_to)
     return db.scalars(query).all()
 
 
