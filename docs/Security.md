@@ -1,41 +1,83 @@
 # Security Notes
 
-## Login and Session Model
+## Authentication Model
 
-The implementation intentionally mirrors the core LogOnService session approach:
+The application uses a cookie-based session model:
 
-- Access token: JWT stored in an HTTP-only cookie.
-- Refresh token: JWT stored in an HTTP-only cookie.
-- CSRF token: random value stored in a readable cookie.
-- Refresh and write requests must include `X-CSRF-Token`.
-- Refresh token sessions are tracked in the `user_sessions` table.
+- Access JWT stored in an HTTP-only cookie.
+- Refresh JWT stored in an HTTP-only cookie.
+- CSRF token stored in a readable cookie.
+- Write requests and refresh/logout requests require `X-CSRF-Token`.
+- Refresh sessions are tracked in the `user_sessions` table.
+
+## Session Lifecycle
+
+- Login creates a refresh session.
+- Refresh rotates the refresh session.
 - Logout revokes the current refresh session.
-- Logout all revokes every active refresh session for the current user.
-- Public signup is disabled; only authenticated admins can create users.
-- Newly created users and admin password resets require the user to change the temporary password before operational access.
+- Logout all revokes every refresh session for the current user.
+- Password reset revokes target-user sessions.
+- Role, ship, or activation changes revoke target-user sessions.
 
-## Password Storage
+## Passwords
 
-Passwords are salted and hashed with PBKDF2-HMAC-SHA256. This is dependency-light for the MVP. For production parity with LogOnService, switch to Argon2id with a managed password policy.
+Passwords are salted and hashed with PBKDF2-HMAC-SHA256 for MVP dependency simplicity.
 
-Admins can reset an account to a temporary password. That action revokes active sessions for the target user and sets `password_reset_required=true`.
+Production recommendation:
 
-## Role-Based Access
+- migrate to Argon2id or bcrypt
+- enforce stronger password policy
+- add login rate limiting
+- add MFA for admin users
 
-Roles:
+## Roles and Access
 
-- `admin`: can create ships, tasks, drills, and update all compliance resources.
-- `crew`: can view the assigned ship, related drills, and update assigned maintenance task status.
+Stored roles:
 
-Users with `password_reset_required=true` can reach only account/session endpoints until they change their password.
+- `admin`
+- `crew`
+
+Super Admin:
+
+- `role = admin`
+- `all_ships = true`
+
+Ship-scoped Admin:
+
+- `role = admin`
+- `all_ships = false`
+- `ship_id` is set
+
+Crew:
+
+- `role = crew`
+- assigned to one ship unless explicitly granted all-ship access
+
+Backend APIs enforce role and ship scope. Frontend visibility is treated as convenience, not security.
+
+## Account Deactivation
+
+Admins can deactivate users. Deactivated users:
+
+- cannot log in
+- lose active sessions through session revocation
+- remain in the database for historical audit and attendance references
+
+The backend prevents deactivating the last active admin.
+
+## CSRF Protection
+
+State-changing requests require a CSRF header matching the readable CSRF cookie. This protects cookie-authenticated browser requests from cross-site form submission.
 
 ## Production Checklist
 
-- Use HTTPS and set `AUTH_COOKIE_SECURE=true`.
-- Replace all example secrets and seed passwords.
-- Restrict `CORS_ORIGINS`.
-- Add rate limiting on auth endpoints.
-- Add audit logging for login, refresh, logout, and admin writes.
-- Add audit logging for task completion, drill attendance, and password reset events.
+- Use HTTPS.
+- Set `AUTH_COOKIE_SECURE=true`.
+- Set exact `CORS_ORIGINS`.
+- Replace default JWT secrets.
+- Replace seed passwords.
+- Add request rate limiting.
+- Add structured audit logs.
 - Add Alembic migrations.
-- Add MFA if admin access will be exposed outside a private environment.
+- Back up PostgreSQL.
+- Monitor container health and disk usage.

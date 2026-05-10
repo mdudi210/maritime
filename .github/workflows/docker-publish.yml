@@ -4,6 +4,11 @@ on:
   push:
     branches: ["main"]
   workflow_dispatch:
+    inputs:
+      publish_note:
+        description: "Reason for manually publishing images"
+        required: false
+        default: "manual publish"
 
 permissions:
   contents: read

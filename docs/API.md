@@ -2,11 +2,13 @@
 
 Base URL: `/api`
 
-## Authentication
+The backend exposes JSON APIs and uses cookie-based authentication. Mutating requests require the `X-CSRF-Token` header to match the `csrf_token` cookie.
 
-`POST /auth/login`
+## Auth
 
-Request:
+### `POST /auth/login`
+
+Logs in an active user.
 
 ```json
 {
@@ -15,39 +17,48 @@ Request:
 }
 ```
 
-Response sets `access_token`, `refresh_token`, and `csrf_token` cookies.
+Sets:
 
-`GET /users/me`
+- `access_token`
+- `refresh_token`
+- `csrf_token`
 
-Returns the current authenticated user from the access cookie.
+### `POST /auth/refresh`
 
-`POST /auth/refresh`
+Rotates refresh session and issues new cookies.
 
-Requires `X-CSRF-Token` header matching the `csrf_token` cookie. Rotates the refresh session and sets new cookies.
+### `POST /auth/logout`
 
-`POST /auth/logout`
+Revokes current refresh session and clears cookies.
 
-Requires CSRF header. Revokes the current refresh session and clears cookies.
+### `POST /auth/logout-all`
 
-`POST /auth/logout-all`
+Revokes every active refresh session for the current user.
 
-Requires CSRF header and a valid access cookie. Revokes all sessions for the current user.
+### `POST /auth/change-password`
 
-`POST /auth/change-password`
-
-Requires CSRF header. Lets the signed-in user change their password and clears first-login reset requirements.
-
-There is no public registration endpoint. Admins create users with `POST /users`.
+Changes password after validating the old password.
 
 ## Users
 
-`GET /users`
+### `GET /users/me`
 
-Admin only. Optional filters: `role`, `ship_id`.
+Returns the current user, including role, ship access, last login, and drill summary counts.
 
-`POST /users`
+### `PATCH /users/me`
 
-Admin only. Requires CSRF header.
+Updates own profile fields allowed for normal users, currently display name.
+
+### `GET /users`
+
+Admin only. Optional filters:
+
+- `role`
+- `ship_id`
+
+### `POST /users`
+
+Admin only. Creates a user.
 
 ```json
 {
@@ -55,110 +66,171 @@ Admin only. Requires CSRF header.
   "username": "crew_one",
   "password": "StrongPassword123",
   "role": "crew",
-  "ship_id": 1
+  "ship_id": 1,
+  "all_ships": false
 }
 ```
 
-New users are created with `password_reset_required=true` and must change the temporary password before accessing operational screens.
+New users must change the temporary password before using operational screens.
 
-`PATCH /users/{user_id}`
+### `PATCH /users/{user_id}`
 
-Admin only. Updates role and crew ship assignment.
+Admin only. Supports controlled updates:
 
-`POST /users/{user_id}/reset-password`
+```json
+{
+  "email": "crew.one@example.com",
+  "username": "crew_one",
+  "role": "crew",
+  "ship_id": 1,
+  "all_ships": false,
+  "is_active": true
+}
+```
 
-Admin only. Sets a temporary password, revokes active sessions for that account, and forces password reset on next login.
+Setting `is_active=false` deactivates the user. Inactive users cannot log in.
 
-## Maritime Resources
+### `POST /users/{user_id}/reset-password`
 
-`GET /ships`
+Admin only. Sets a temporary password, revokes active sessions, and forces password change.
 
-Lists ships for admin and crew users. Optional filters: `search`, `status`.
+## Ships
 
-`GET /ships/{ship_id}`
+### `GET /ships`
 
-Returns one ship. Crew users can access only their assigned ship.
+Returns ships visible to the current user. Optional filters:
 
-`POST /ships`
+- `search`
+- `status`
 
-Admin only. Creates a ship.
+### `GET /ships/{ship_id}`
 
-`GET /maintenance`
+Returns one visible ship.
 
-Admins see all maintenance tasks. Crew users see their assigned ship/tasks. Optional filters: `ship_id`, `status_filter`.
+### `POST /ships`
 
-Additional filters:
+Super Admin only. Creates a ship.
 
-- `due_from` (YYYY-MM-DD)
-- `due_to` (YYYY-MM-DD)
+### `PATCH /ships/{ship_id}`
 
-`POST /maintenance`
+Admin only for accessible ships.
 
-Admin only. Creates a maintenance task.
+## Maintenance
+
+### `GET /maintenance`
+
+Returns maintenance tasks visible to the user. Optional filters:
+
+- `ship_id`
+- `status_filter`
+- `due_from`
+- `due_to`
+
+### `POST /maintenance`
+
+Admin only. Creates a task.
 
 ```json
 {
   "title": "Inspect lifeboat davits",
+  "description": "Quarterly inspection",
   "ship_id": 1,
-  "assigned_to_id": 2,
+  "assigned_to_ids": [2, 3],
+  "assign_all_crew": false,
   "due_date": "2026-05-15",
   "due_time": "14:30"
 }
 ```
 
-`PATCH /maintenance/{task_id}`
+### `PATCH /maintenance/{task_id}`
 
-Admins can update task fields. Crew users can update status on assigned tasks. When status becomes `completed`, responses include `completed_at` and `completed_by_id`.
+Admins can update task fields. Crew can update status for assigned tasks. Completion records `completed_at` and `completed_by_id`.
 
-`GET /drills`
+### `DELETE /maintenance/{task_id}`
 
-Lists safety drills. Optional filters: `ship_id`, `status_filter`.
+Admin only.
 
-Additional filters:
+### `GET /maintenance/{task_id}/comments`
 
-- `scheduled_from` (YYYY-MM-DD)
-- `scheduled_to` (YYYY-MM-DD)
+Returns task comments for users allowed to access the task.
 
-`POST /drills`
+### `POST /maintenance/{task_id}/comments`
 
-Admin only. Schedules a drill.
+Adds a task comment.
+
+## Drills
+
+### `GET /drills`
+
+Returns visible drills. Optional filters:
+
+- `ship_id`
+- `status_filter`
+- `scheduled_from`
+- `scheduled_to`
+
+### `POST /drills`
+
+Admin only. Start and end time are mandatory.
 
 ```json
 {
   "drill_type": "Fire drill",
   "ship_id": 1,
   "scheduled_date": "2026-05-15",
-  "scheduled_time": "09:15"
+  "scheduled_time": "09:15",
+  "end_time": "10:00"
 }
 ```
 
-`PATCH /drills/{drill_id}`
+### `PATCH /drills/{drill_id}`
 
-Admin only. Updates a drill.
+Admin only. Completed drills are read-only.
 
-`DELETE /drills/{drill_id}`
+### `DELETE /drills/{drill_id}`
 
-Admin only. Deletes a drill and its attendance rows.
+Admin only. Completed drills are read-only.
 
-`GET /drills/{drill_id}/attendance`
+### `GET /drills/{drill_id}/attendance`
 
-Admin and assigned crew. Returns attendance rows with `attended_at` and `completed_at` timestamps when available.
+Returns drill attendance rows.
 
-`POST /drills/{drill_id}/attendance/mark`
+### `POST /drills/{drill_id}/attendance/mark`
 
-Crew only. Marks attendance on the scheduled date and records `attended_at`.
+Crew only. Attendance can be marked only while:
 
-`POST /drills/{drill_id}/complete`
+- current server time is after start time
+- current server time is before or equal to end time
+- the crew member is assigned to that ship/drill
 
-Crew only. Submits completion on the scheduled date and records `completed_at`.
+### `POST /drills/{drill_id}/complete`
 
-`GET /dashboard/compliance`
+Crew only. Marks drill completion during the active drill window.
 
-Returns ship count, task totals, overdue counts, drill totals, and compliance percentages. `drill_compliance_percent` is based on participation (attendance), and `drill_participation_percent` is included explicitly. Optional filter: `ship_id`.
+## Dashboard
 
-`GET /dashboard/compliance/items`
+### `GET /dashboard/compliance`
 
-Returns the list views used by the compliance dashboard:
+Returns:
+
+- ship count
+- maintenance totals
+- maintenance completed
+- maintenance overdue
+- drill totals
+- drill completed
+- drill missed
+- maintenance compliance percent
+- drill compliance percent
+- drill participation percent
+
+Optional filter:
+
+- `ship_id`
+
+### `GET /dashboard/compliance/items`
+
+Returns dashboard list data:
 
 - `pending_maintenance`
 - `overdue_maintenance`

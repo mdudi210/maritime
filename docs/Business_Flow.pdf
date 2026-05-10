@@ -1,0 +1,163 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Length 2272 >>
+stream
+BT
+/F1 11 Tf
+50 790 Td
+14 TL
+(Business Flow) Tj
+T* () Tj
+T* (This document describes the end-to-end business flow for the Maritime Operations &) Tj
+T* (  Compliance System. It is intended for reviewers and can be exported to PDF for submission.) Tj
+T* () Tj
+T* (  User Access Flow) Tj
+T* () Tj
+T* (  An admin logs in using email or username and password.) Tj
+T* (  The backend validates credentials and verifies that the account is active.) Tj
+T* (  The backend issues access and refresh JWT cookies plus a CSRF cookie.) Tj
+T* (  If the user must reset a temporary password, they are redirected to the reset-password) Tj
+T* (  flow.) Tj
+T* (  The user is routed to the correct workspace:) Tj
+T* (   - Admin users use dashboard, maintenance, drill, attendance, users, security, and) Tj
+T* (  profile pages.) Tj
+T* (   - Crew users use dashboard, crew workspace, security, and profile pages.) Tj
+T* () Tj
+T* (  User Management Flow) Tj
+T* () Tj
+T* (  An admin opens the Users page.) Tj
+T* (  User cards show account details, role, ship assignment, activity status, last login,) Tj
+T* (  assigned drill count, and completed drill count.) Tj
+T* (  Admins can create users from the Add User modal.) Tj
+T* (  Admins can edit user details from the Edit action on the user card.) Tj
+T* (  Admins can reset a user's password. This revokes active sessions and requires a password) Tj
+T* (  change on next login.) Tj
+T* (  Admins can deactivate a user. Deactivated users cannot log in and active sessions are) Tj
+T* (  revoked.) Tj
+T* (  The backend prevents duplicate email/username accounts and prevents deactivating or) Tj
+T* (  demoting the final active admin.) Tj
+T* () Tj
+T* (  Ship and Access Flow) Tj
+T* () Tj
+T* (  Super Admins can view all ships.) Tj
+T* (  Ship-scoped admins and crew members see only their assigned ship.) Tj
+T* (  API filters enforce ship access server-side.) Tj
+T* (  Frontend dropdowns only display ships returned by the backend.) Tj
+T* () Tj
+T* (  Maintenance Flow) Tj
+T* () Tj
+T* (  Admin creates a maintenance task for a ship.) Tj
+T* (  Admin assigns the task to one crew member, multiple crew members, or all eligible crew on) Tj
+T* (  that ship.) Tj
+T* (  Crew members see only tasks assigned to them.) Tj
+T* (  Crew can update task status.) Tj
+ET
+endstream
+endobj
+3 0 obj
+<< /Length 2162 >>
+stream
+BT
+/F1 11 Tf
+50 790 Td
+14 TL
+(  Completed tasks record completion timestamp and completing user.) Tj
+T* (  Dashboard metrics treat open tasks past due date as overdue.) Tj
+T* () Tj
+T* (  Safety Drill Flow) Tj
+T* () Tj
+T* (  Admin schedules a drill with drill type, ship, date, start time, and end time.) Tj
+T* (  The backend validates that end time is after start time.) Tj
+T* (  Eligible crew for the ship are snapshotted into attendance rows.) Tj
+T* (  A drill is scheduled before start time.) Tj
+T* (  A drill becomes active between start time and end time.) Tj
+T* (  Crew can mark attendance or completion only while active.) Tj
+T* (  After end time, drill records become read-only.) Tj
+T* (  New crew added after a drill is completed do not appear in that historical drill) Tj
+T* (  attendance list.) Tj
+T* () Tj
+T* (  Attendance Reporting Flow) Tj
+T* () Tj
+T* (  Admin opens the Attendance page.) Tj
+T* (  The system loads drill attendance rows across selected drills.) Tj
+T* (  Filters can be applied by ship, drill type, date range, crew member, and attendance) Tj
+T* (  status.) Tj
+T* (  If filters return no matching data, the page shows a clear "No records found" state.) Tj
+T* (  Large reports use load-more pagination on the frontend.) Tj
+T* () Tj
+T* (  Compliance Dashboard Flow) Tj
+T* () Tj
+T* (  Dashboard requests compliance metrics from the backend.) Tj
+T* (  Backend refreshes drill statuses based on server time.) Tj
+T* (  Backend applies role and ship scoping.) Tj
+T* (  Backend calculates:) Tj
+T* (   - total ships visible to the user) Tj
+T* (   - maintenance total/completed/overdue) Tj
+T* (   - drill total/completed/missed) Tj
+T* (   - maintenance compliance percentage) Tj
+T* (   - drill participation percentage) Tj
+T* (  Frontend displays metrics, risk lists, and visual progress indicators.) Tj
+T* () Tj
+T* (  Profile Flow) Tj
+T* () Tj
+T* (  Any authenticated user can open Profile.) Tj
+T* (  Users can update their display name.) Tj
+T* (  Users can change password after entering the old password.) Tj
+T* (  Users cannot change their own role, ship assignment, or restricted account settings.) Tj
+T* () Tj
+T* (  Security Flow) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Length 353 >>
+stream
+BT
+/F1 11 Tf
+50 790 Td
+14 TL
+() Tj
+T* (  Access token authorizes normal requests.) Tj
+T* (  Refresh token rotates sessions.) Tj
+T* (  Write requests require CSRF token header.) Tj
+T* (  Logout revokes the current refresh session.) Tj
+T* (  Logout all revokes all active refresh sessions for the user.) Tj
+T* (  Inactive users cannot authenticate.) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 8 0 R /MediaBox [0 0 612 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 2 0 R >>
+endobj
+6 0 obj
+<< /Type /Page /Parent 8 0 R /MediaBox [0 0 612 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 3 0 R >>
+endobj
+7 0 obj
+<< /Type /Page /Parent 8 0 R /MediaBox [0 0 612 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 4 0 R >>
+endobj
+8 0 obj
+<< /Type /Pages /Kids [5 0 R 6 0 R 7 0 R] /Count 3 >>
+endobj
+9 0 obj
+<< /Type /Catalog /Pages 8 0 R >>
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000009 00000 n 
+0000000079 00000 n 
+0000002403 00000 n 
+0000004617 00000 n 
+0000005021 00000 n 
+0000005147 00000 n 
+0000005273 00000 n 
+0000005399 00000 n 
+0000005468 00000 n 
+trailer
+<< /Size 10 /Root 9 0 R >>
+startxref
+5517
+%%EOF

@@ -2,83 +2,125 @@
 
 ## Product
 
-Maritime Operations & Compliance System is a web application for tracking vessel maintenance, safety drills, and operational compliance.
+Maritime Operations & Compliance System is a web application for managing vessel maintenance tasks, safety drills, crew attendance, user access, and compliance reporting.
 
 ## Goals
 
-- Give admins a single console to create and monitor maintenance tasks and safety drills.
-- Give crew users a simple workspace to see assigned work and update task status.
-- Show compliance metrics that identify overdue maintenance and missed drills.
-- Provide secure login, refresh, logout, and logout-all behavior based on the LogOnService session model.
-- Prevent public signup; admins own user creation and crew-to-ship assignment.
-- Track task completion, drill attendance, and drill completion with visible timestamps.
-- Make the project easy to run, deploy, and hand over to another engineer or reviewer.
+- Provide admins with a single operational console.
+- Provide crew members with a focused assigned-work workspace.
+- Track maintenance completion and drill attendance with timestamps.
+- Calculate compliance metrics for maintenance and safety drill participation.
+- Enforce role and ship access at the backend.
+- Support Docker-based local review and production deployment.
+- Provide clear documentation for evaluation and handoff.
 
 ## Users
 
-Admin users:
+### Super Admin
 
-- Manage ships.
-- Create maintenance tasks.
-- Schedule safety drills.
-- Review completed task metadata and drill attendance/completion details.
-- Review fleet compliance metrics.
+Implemented as `role = admin` and `all_ships = true`.
 
-Crew users:
+- Access all ships.
+- Manage all users.
+- Create admin and crew accounts.
+- View fleet-wide and ship-wise metrics.
+- Create ships, maintenance tasks, and drills.
+
+### Ship-Scoped Admin
+
+Implemented as `role = admin`, `all_ships = false`, and `ship_id` set.
+
+- Access assigned ship.
+- Manage crew for assigned ship.
+- Create ship-scoped maintenance tasks and drills.
+- View compliance metrics for assigned ship.
+
+### Crew
+
+Implemented as `role = crew`.
 
 - View assigned maintenance tasks.
-- Update task status.
-- View upcoming safety drills.
-- Mark drill attendance and submit drill completion on the scheduled day.
+- Update assigned task status.
+- View assigned ship drills.
+- Mark attendance only while a drill is active.
 
-## MVP Scope
+## Functional Scope
 
-Authentication:
+### Authentication
 
-- Email or username login.
-- Admin-only user creation.
-- First-login password reset for newly created users.
-- Admin password reset for any account.
-- Crew assignment to ships.
-- Access and refresh JWT cookies.
-- CSRF protection for refresh, logout, and write requests.
-- Current-session logout.
+- Login with email or username.
+- HTTP-only access and refresh cookies.
+- CSRF protection for write requests.
+- Refresh-token session tracking.
+- Logout current session.
 - Logout all sessions.
+- Forced first-login password reset.
 
-Maritime operations:
+### User Management
 
-- Ships list, ship filtering, individual ship views, and ship creation.
-- Maintenance task creation, listing, and status updates.
-- Optional time-of-day on maintenance tasks and safety drills.
-- Safety drill scheduling, listing, deletion, attendance, and completion.
-- Visible `completed_at`, `completed_by`, `attended_at`, and drill completion timestamps where relevant.
-- Compliance dashboard.
+- Admin-created accounts only.
+- Unique email and username.
+- Edit user details from modal.
+- Reset password.
+- Activate/deactivate user.
+- Prevent inactive users from logging in.
+- Prevent deactivating/demoting final active admin.
 
-Deployment and handoff:
+### Maintenance
 
-- Docker Compose for backend, frontend, and PostgreSQL.
-- Local SQLite default for fast development.
-- Documentation for architecture, APIs, security, and deployment.
+- Create tasks with due date and due time.
+- Assign to one, multiple, or all eligible crew.
+- Crew can update assigned task status.
+- Completion records user and timestamp.
+- Overdue cases are included in dashboard risk metrics.
+
+### Safety Drills
+
+- Create drills with date, start time, and end time.
+- Drill becomes active only during start/end window.
+- Attendance changes are blocked outside the active window.
+- Completed drills are read-only.
+- Historical attendance rows are preserved.
+
+### Attendance Reporting
+
+- Report across crew members and drills.
+- Filters for ship, drill type, date range, crew, and status.
+- Empty state for no matching records.
+- Load-more pagination for large result sets.
+
+### Compliance Dashboard
+
+- Maintenance compliance percentage.
+- Drill participation percentage.
+- Overdue maintenance count.
+- Missed drill count.
+- Role/ship-scoped metrics.
 
 ## Business Rules
 
-- A maintenance task must have a due date.
-- A safety drill must have a scheduled date.
-- Maintenance tasks and drills require a time on the selected date.
-- Maintenance is overdue when the due date is before today and status is not `completed`.
-- A drill is missed when the scheduled date is before today and status is not `completed`.
-- Completing a maintenance task records who completed it and when.
-- Marking drill attendance records when the crew member attended.
-- Submitting drill completion records when the crew member completed the drill.
-- Maintenance compliance is `completed tasks / total tasks`.
-- Drill participation compliance is `attended participations / total participations` for drills scheduled up to today.
+- Drill start and end time are mandatory.
+- Drill end time must be after start time.
+- Drill attendance can be modified only while active.
+- Maintenance is overdue when due date is before today and status is not completed.
+- Drill participation is counted from persisted attendance rows.
+- Backend permission checks are authoritative.
+- Deactivated users cannot authenticate.
 
-## Out of Scope for This MVP
+## Out of Scope
 
-- MFA and OAuth.
-- Email notifications.
+- MFA/OAuth.
+- Email/SMS notifications.
 - File attachments.
-- Full audit event history.
+- Full audit log UI.
 - Alembic migrations.
+- Advanced analytics cache.
 
-These are documented as production follow-ups rather than hidden assumptions.
+## Future Enhancements
+
+- Audit log module.
+- Notification service.
+- Alembic migration setup.
+- Managed PostgreSQL deployment guide.
+- Role-permission matrix table in the database.
+- Background scheduler for notifications and drill state updates.
