@@ -11,6 +11,7 @@ import {
   getTaskComments,
   getUsers,
   updateShip,
+  createShip,
   updateSafetyDrill,
   updateMaintenanceStatus
 } from "../api/maritimeApi";
@@ -44,6 +45,9 @@ export default function DashboardPage() {
   const [taskForComments, setTaskForComments] = useState<MaintenanceTask | null>(null);
   const [taskComments, setTaskComments] = useState<TaskComment[] | null>(null);
   const [newTaskComment, setNewTaskComment] = useState("");
+  const [creatingShip, setCreatingShip] = useState(false);
+  const [newShipName, setNewShipName] = useState("");
+  const [newShipImo, setNewShipImo] = useState("");
 
   const selectedShip = useMemo(
     () => ships.find((ship) => selectedShipId !== "all" && ship.id === selectedShipId),
@@ -200,7 +204,14 @@ export default function DashboardPage() {
         </section>
 
         <section className="content-grid">
-          <Panel title="Ships">
+          <section className="panel">
+            <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h2><CheckCircle2 size={18} style={{ display: "inline-block", verticalAlign: "middle", marginRight: 8 }} /> Ships</h2>
+              {user?.role === "admin" ? (
+                <button className="primary-button" style={{ padding: "4px 12px", fontSize: "0.85rem" }} onClick={() => setCreatingShip(true)}>New Ship</button>
+              ) : null}
+            </header>
+            <div className="list">
             {filteredShips.map((ship) => (
               <article className={`row-card ship-row ${selectedShipId === ship.id ? "selected" : ""}`} key={ship.id}>
                 <div>
@@ -234,7 +245,8 @@ export default function DashboardPage() {
                 </div>
               </article>
             ))}
-          </Panel>
+            </div>
+          </section>
           <Panel title="Maintenance">
             {tasks.map((task) => (
               <article className="row-card" key={task.id}>
@@ -422,6 +434,47 @@ export default function DashboardPage() {
                   ))
                 )}
               </div>
+            </section>
+          </div>
+        ) : null}
+
+        {creatingShip ? (
+          <div className="modal-overlay" onClick={() => setCreatingShip(false)} role="presentation">
+            <section className="modal" onClick={(event) => event.stopPropagation()}>
+              <header className="modal-header">
+                <div>
+                  <strong>Register New Ship</strong>
+                </div>
+                <button className="ghost-button" onClick={() => setCreatingShip(false)}>Close</button>
+              </header>
+              {attendanceError ? <p className="error">{attendanceError}</p> : null}
+              <form
+                className="form"
+                onSubmit={async (event) => {
+                  event.preventDefault();
+                  if (!newShipName.trim()) return;
+                  try {
+                    setAttendanceError(null);
+                    await createShip({ name: newShipName.trim(), imo_number: newShipImo.trim() || undefined });
+                    setCreatingShip(false);
+                    setNewShipName("");
+                    setNewShipImo("");
+                    await reload();
+                  } catch (error) {
+                    setAttendanceError(error instanceof Error ? error.message : "Failed to register ship");
+                  }
+                }}
+              >
+                <label>
+                  Ship Name
+                  <input value={newShipName} onChange={(event) => setNewShipName(event.target.value)} placeholder="e.g. MV Explorer" required />
+                </label>
+                <label>
+                  IMO Number (Optional)
+                  <input value={newShipImo} onChange={(event) => setNewShipImo(event.target.value)} placeholder="e.g. IMO9123456" />
+                </label>
+                <button className="primary-button">Register Ship</button>
+              </form>
             </section>
           </div>
         ) : null}
