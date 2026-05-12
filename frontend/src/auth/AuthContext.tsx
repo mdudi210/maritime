@@ -15,15 +15,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 async function resolveUser(): Promise<UserSummary | null> {
   try {
     return await me();
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
-      try {
-        await refresh();
-        return await me();
-      } catch {
-        return null;
-      }
-    }
+  } catch {
     return null;
   }
 }

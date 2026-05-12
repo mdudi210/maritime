@@ -132,4 +132,8 @@ Before exposing publicly:
 - [API Guide](docs/API.md)
 - [Deployment Guide](docs/Deployment.md)
 - [Security Notes](docs/Security.md)
+- [API Flow & Middleware](docs/API_Flow.md)
+- [Schema Documentation](docs/Schema.md)
+- [Compliance Calculation](docs/Compliance_Calculation.md)
+- [QA Test Cases](docs/Test_Cases.md)
 - [Evaluation Mapping](docs/Evaluation_Mapping.md)

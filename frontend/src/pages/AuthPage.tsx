@@ -10,8 +10,8 @@ export default function AuthPage() {
   const { user, reloadUser } = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [emailOrUsername, setEmailOrUsername] = useState("admin@example.com");
-  const [password, setPassword] = useState("Admin@12345");
+  const [emailOrUsername, setEmailOrUsername] = useState("");
+  const [password, setPassword] = useState("");
 
   if (user) {
     return <Navigate to={user.password_reset_required ? "/reset-password" : "/dashboard"} replace />;

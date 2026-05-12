@@ -46,15 +46,35 @@ async function toApiError(response: Response): Promise<ApiError> {
   }
 }
 
-export async function apiRequest<T>(path: string, init?: RequestInit, withCsrf = false): Promise<T> {
+export async function apiRequest<T>(path: string, init?: RequestInit, withCsrf = false, isRetry = false): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     credentials: "include",
     headers: buildHeaders(init?.headers, withCsrf)
   });
+  
   if (!response.ok) {
+    // Auto-refresh token on 401 if it's not already a retry and not the auth endpoints themselves
+    if (response.status === 401 && !isRetry && path !== "/auth/login" && path !== "/auth/refresh") {
+      try {
+        const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: "POST",
+          credentials: "include",
+          headers: buildHeaders(undefined, true) // requires CSRF
+        });
+        
+        if (refreshResponse.ok) {
+          // Successfully refreshed, retry the original request
+          return await apiRequest<T>(path, init, withCsrf, true);
+        }
+      } catch {
+        // If refresh fails, fall through and throw the original 401 error
+      }
+    }
+    
     throw await toApiError(response);
   }
+  
   if (response.status === 204) {
     return undefined as T;
   }
