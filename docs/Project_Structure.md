@@ -1,29 +1,23 @@
 # Project Structure
 
+The repository is organized to keep backend, frontend, deployment, and documentation concerns separate.
+
 ```text
-Maritime/
+.
 ├── backend/
 │   ├── app/
 │   │   ├── api/
 │   │   │   ├── deps.py
 │   │   │   └── routes/
-│   │   │       ├── auth.py
-│   │   │       ├── dashboard.py
-│   │   │       ├── drills.py
-│   │   │       ├── maintenance.py
-│   │   │       ├── ships.py
-│   │   │       └── users.py
 │   │   ├── core/
-│   │   │   ├── config.py
-│   │   │   ├── database.py
-│   │   │   └── security.py
 │   │   ├── models/
 │   │   ├── schemas/
 │   │   ├── services/
 │   │   ├── tests/
 │   │   └── main.py
 │   ├── Dockerfile
-│   └── requirements.txt
+│   ├── requirements.txt
+│   └── requirements-dev.txt
 ├── frontend/
 │   ├── src/
 │   │   ├── api/
@@ -32,44 +26,106 @@ Maritime/
 │   │   ├── pages/
 │   │   ├── styles/
 │   │   ├── types/
-│   │   ├── utils/
-│   │   ├── App.tsx
 │   │   └── main.tsx
 │   ├── Dockerfile
 │   ├── nginx.conf
-│   ├── package.json
-│   └── vite.config.ts
+│   └── package.json
 ├── docs/
-│   ├── API.md
-│   ├── Architecture.md
-│   ├── Deployment.md
-│   ├── Product_Requirement.md
-│   ├── Project_Structure.md
-│   └── Security.md
+├── .github/workflows/
 ├── docker-compose.yml
 ├── docker-compose.prod.yml
-├── .github/
-│   └── workflows/
-│       ├── ci.yml
-│       └── docker-publish.yml
-├── README.md
-└── .gitignore
+└── README.md
 ```
 
-## Backend Boundaries
+## Backend Responsibilities
 
-- API routes should stay thin.
-- Auth/session behavior belongs in `services/auth_service.py`.
-- JWT and password utilities belong in `core/security.py`.
-- SQLAlchemy models belong in `models`.
-- Request and response validation belongs in `schemas`.
-- Lightweight startup migrations in `core/database.py` cover MVP schema additions such as password reset flags, task/drill time fields, and completion timestamps.
+### `api/routes`
 
-## Frontend Boundaries
+HTTP endpoints grouped by resource. Routes handle request parsing, dependency injection, permission checks, and response models.
 
-- Network calls belong in `src/api`.
-- Current-user state belongs in `src/auth`.
-- Shared authenticated layout belongs in `src/components`.
-- Route-level screens belong in `src/pages`.
-- API response shapes belong in `src/types`.
-- Admin user management, first-login password reset, maintenance completion metadata, and drill attendance details are implemented as route-level screens backed by `src/api`.
+### `api/deps.py`
+
+Shared FastAPI dependencies:
+
+- current user resolution
+- role enforcement
+- CSRF validation
+- password-reset access gating
+
+### `core`
+
+Framework-level infrastructure:
+
+- database engine/session setup
+- environment configuration
+- password hashing and JWT helpers
+
+### `models`
+
+SQLAlchemy ORM models:
+
+- `User`
+- `UserSession`
+- `Ship`
+- `MaintenanceTask`
+- `MaintenanceTaskAssignee`
+- `TaskComment`
+- `SafetyDrill`
+- `DrillParticipation`
+
+### `schemas`
+
+Pydantic request and response contracts. These keep API payloads explicit and documented.
+
+### `services`
+
+Business logic and reusable domain behavior:
+
+- `auth_service.py`
+- `drill_service.py`
+- `compliance_service.py`
+- `seed.py`
+
+### `tests`
+
+API-level tests validating login, sessions, user management, drill deletion, and timestamp behavior.
+
+## Frontend Responsibilities
+
+### `api`
+
+Typed functions for backend communication.
+
+### `auth`
+
+Session state and authenticated-user lifecycle.
+
+### `components`
+
+Shared shell, navigation, and route protection.
+
+### `pages`
+
+Screen-level UI:
+
+- Auth
+- Dashboard
+- Crew dashboard
+- Maintenance management
+- Drill management
+- Attendance report
+- Users
+- Profile
+- Security/session
+- Reset password
+
+### `types`
+
+Frontend TypeScript representations of API response objects.
+
+## Deployment Files
+
+- `docker-compose.yml`: local/reviewer deployment with built images.
+- `docker-compose.prod.yml`: production deployment using published images.
+- `.github/workflows/ci.yml`: tests and build checks.
+- `.github/workflows/docker-publish.yml`: GHCR image publication.

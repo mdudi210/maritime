@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "local"
     API_PREFIX: str = "/api"
     CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
-    CORS_ORIGIN_REGEX: str = r"^http://(localhost|127\.0\.0\.1)(:\d+)?$"
+    CORS_ORIGIN_REGEX: str = ".*"
 
     DATABASE_URL: str = "sqlite:///./maritime.db"
     JWT_SECRET_KEY: str = "change-me-in-production"

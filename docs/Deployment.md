@@ -1,47 +1,109 @@
 # Deployment Guide
 
-## Local Shareable Deployment
+## Local Reviewer Deployment
 
-Use Docker Compose when you want to share the app with another reviewer on your machine:
+Use Docker Compose from the repository root:
 
 ```bash
 docker compose up --build
 ```
 
-URLs:
+Open:
 
 - Frontend: `http://localhost:5173`
 - Backend health: `http://localhost:8000/health`
 - API docs: `http://localhost:8000/docs`
+- PostgreSQL: `localhost:5432`
 
-## Environment Variables
+Stop:
 
-Backend variables live in `backend/.env.example`.
-
-Important production changes:
-
-- Set `JWT_SECRET_KEY` and `JWT_REFRESH_SECRET_KEY` to long random values.
-- Use PostgreSQL through `DATABASE_URL`.
-- Set `AUTH_COOKIE_SECURE=true` behind HTTPS.
-- Set `CORS_ORIGINS` to the exact frontend domain.
-- Change seed passwords before exposing the app.
-
-## Production Notes
-
-This repository is ready for a small single-node deployment with Docker Compose. For a cloud deployment, run the backend container behind HTTPS, serve the frontend through Nginx or a static host, and use a managed PostgreSQL database.
-
-The current backend creates tables on startup for MVP speed and applies lightweight column additions for the local MVP database. For a longer-lived production system, replace those startup migrations with Alembic before making schema changes.
+```bash
+docker compose down
+```
 
 ## GitHub Actions
 
-The repo includes two workflows:
+### CI
 
-- `CI`: installs dependencies, runs backend tests, builds the frontend, and builds Docker images.
-- `Publish Docker Images`: publishes backend and frontend images to GitHub Container Registry on `main`.
+`.github/workflows/ci.yml` runs on `main` and `dev`.
 
-After pushing to GitHub, enable Actions and push to `main`. Images will be published as:
+It validates:
 
-- `ghcr.io/<owner>/<repo>-backend`
-- `ghcr.io/<owner>/<repo>-frontend`
+- backend tests
+- frontend production build
+- backend Docker image build
+- frontend Docker image build
 
-Set those values as `BACKEND_IMAGE` and `FRONTEND_IMAGE` when using `docker-compose.prod.yml`.
+### Docker Publish
+
+`.github/workflows/docker-publish.yml` publishes images to GitHub Container Registry on pushes to `main`. It can also be triggered manually from GitHub Actions.
+
+Images:
+
+- `ghcr.io/mdudi210/maritime-backend`
+- `ghcr.io/mdudi210/maritime-frontend`
+
+## Production Deployment With Docker Compose
+
+On a VPS/cloud server with Docker installed:
+
+```bash
+export BACKEND_IMAGE=ghcr.io/mdudi210/maritime-backend:main
+export FRONTEND_IMAGE=ghcr.io/mdudi210/maritime-frontend:main
+docker compose -f docker-compose.prod.yml up -d
+```
+
+The frontend is exposed on port `8080` by default:
+
+```text
+http://YOUR_SERVER_IP:8080
+```
+
+For a real domain, put Nginx, Caddy, Cloudflare Tunnel, or a cloud load balancer in front of the app and terminate HTTPS.
+
+## Required Production Environment Changes
+
+Set these before exposing the system:
+
+- `JWT_SECRET_KEY`: long random secret
+- `JWT_REFRESH_SECRET_KEY`: long random secret
+- `POSTGRES_PASSWORD`: strong password
+- `AUTH_COOKIE_SECURE=true`
+- `AUTH_COOKIE_SAMESITE=lax` or stricter depending on deployment
+- `CORS_ORIGINS=https://your-domain.com`
+- seed admin password changed from the default
+
+## Recommended Server Layout
+
+```text
+/opt/maritime/
+  docker-compose.prod.yml
+  .env
+```
+
+Example `.env`:
+
+```bash
+BACKEND_IMAGE=ghcr.io/mdudi210/maritime-backend:main
+FRONTEND_IMAGE=ghcr.io/mdudi210/maritime-frontend:main
+POSTGRES_DB=maritime
+POSTGRES_USER=maritime
+POSTGRES_PASSWORD=replace-with-strong-password
+```
+
+Then:
+
+```bash
+docker compose --env-file .env -f docker-compose.prod.yml up -d
+```
+
+## Production Hardening Checklist
+
+- Use HTTPS.
+- Use managed PostgreSQL or scheduled database backups.
+- Replace startup table creation with Alembic migrations.
+- Add request rate limiting to login endpoints.
+- Add structured audit logs.
+- Configure container restart policies.
+- Monitor backend health and database disk usage.
+- Restrict server firewall ports to HTTP/HTTPS and SSH.
