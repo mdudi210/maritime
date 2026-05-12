@@ -2,9 +2,10 @@ services:
   backend:
     image: ${BACKEND_IMAGE:-ghcr.io/OWNER/REPO-backend:latest}
     env_file:
-      - ./backend/.env.production.example
+      - .env
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-maritime}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-maritime}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
     ports:
       - "8000:8000"
     depends_on:
