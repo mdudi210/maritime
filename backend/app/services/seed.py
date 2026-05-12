@@ -9,12 +9,13 @@ from app.models.ship import Ship
 from app.models.user import User
 
 
-def _ensure_user(db: Session, *, email: str, username: str, password: str, role: str) -> None:
+def _ensure_user(db: Session, *, email: str, username: str, password: str, role: str, all_ships: bool = False) -> None:
     existing = db.scalar(select(User).where((User.email == email) | (User.username == username)))
     if existing:
         existing.email = email
         existing.role = role
         existing.is_active = True
+        existing.all_ships = all_ships
         if not existing.password_hash or not existing.password_salt:
             existing.password_hash, existing.password_salt = hash_password(password)
         return
@@ -26,6 +27,7 @@ def _ensure_user(db: Session, *, email: str, username: str, password: str, role:
             password_hash=password_hash,
             password_salt=password_salt,
             role=role,
+            all_ships=all_ships,
         )
     )
 
@@ -44,10 +46,8 @@ def seed_initial_data(db: Session) -> None:
         username=settings.SEED_ADMIN_USERNAME,
         password=settings.SEED_ADMIN_PASSWORD,
         role="admin",
+        all_ships=True,
     )
-    admin = db.scalar(select(User).where(User.email == settings.SEED_ADMIN_EMAIL))
-    if admin:
-        admin.all_ships = True
     _ensure_user(
         db,
         email=settings.SEED_CREW_EMAIL,
