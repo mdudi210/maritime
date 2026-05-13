@@ -51,6 +51,7 @@ export default function DashboardPage() {
   const [newShipName, setNewShipName] = useState("");
   const [newShipImo, setNewShipImo] = useState("");
   const [submittingDrill, setSubmittingDrill] = useState<number | null>(null);
+  const [markedDrillIds, setMarkedDrillIds] = useState<Set<number>>(new Set());
 
   const selectedShip = useMemo(
     () => ships.find((ship) => selectedShipId !== "all" && ship.id === selectedShipId),
@@ -80,6 +81,24 @@ export default function DashboardPage() {
     setTasks(nextTasks);
     setDrills(nextDrills);
     setCrew(nextCrew);
+
+    // For crew: check which active drills they already attended
+    if (user?.role === "crew") {
+      const activeDrills = nextDrills.filter((d) => d.status === "active");
+      const attendanceChecks = await Promise.allSettled(
+        activeDrills.map((d) => getDrillAttendance(d.id))
+      );
+      const marked = new Set<number>();
+      attendanceChecks.forEach((result, idx) => {
+        if (result.status === "fulfilled") {
+          const rows = result.value;
+          if (rows.some((r) => r.attendance === true)) {
+            marked.add(activeDrills[idx].id);
+          }
+        }
+      });
+      setMarkedDrillIds(marked);
+    }
   };
 
   useEffect(() => {
@@ -345,12 +364,11 @@ export default function DashboardPage() {
                       {drill.status === "active" ? (
                         <button
                           className="ghost-button"
-                          disabled={submittingDrill === drill.id}
+                          disabled={submittingDrill === drill.id || markedDrillIds.has(drill.id)}
                           onClick={async () => {
                             setSubmittingDrill(drill.id);
                             try {
                               await markDrillAttendance(drill.id, true);
-                              alert("Attendance marked as present!");
                               await reload();
                             } catch (err) {
                               setAttendanceError(err instanceof Error ? err.message : "Failed to mark attendance");
@@ -359,7 +377,7 @@ export default function DashboardPage() {
                             }
                           }}
                         >
-                          Mark Present
+                          {markedDrillIds.has(drill.id) ? "Already Marked Present ✓" : "Mark Present"}
                         </button>
                       ) : null}
                     </>

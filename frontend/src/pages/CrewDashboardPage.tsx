@@ -5,9 +5,9 @@ import {
   getMaintenanceTasks,
   getSafetyDrills,
   getTaskComments,
+  getDrillAttendance,
   updateMaintenanceStatus,
-  markDrillAttendance,
-  submitDrillCompletion
+  markDrillAttendance
 } from "../api/maritimeApi";
 import type { MaintenanceTask, SafetyDrill, TaskComment } from "../types/api";
 
@@ -19,6 +19,7 @@ export default function CrewDashboardPage() {
   const [taskComments, setTaskComments] = useState<TaskComment[] | null>(null);
   const [newTaskComment, setNewTaskComment] = useState("");
   const [submittingDrill, setSubmittingDrill] = useState<number | null>(null);
+  const [markedDrillIds, setMarkedDrillIds] = useState<Set<number>>(new Set());
 
   const reload = async () => {
     setError(null);
@@ -26,6 +27,17 @@ export default function CrewDashboardPage() {
       const [nextTasks, nextDrills] = await Promise.all([getMaintenanceTasks(), getSafetyDrills()]);
       setTasks(nextTasks);
       setDrills(nextDrills);
+
+      // Check which active drills this crew member already attended
+      const activeDrills = nextDrills.filter((d) => d.status === "active");
+      const checks = await Promise.allSettled(activeDrills.map((d) => getDrillAttendance(d.id)));
+      const marked = new Set<number>();
+      checks.forEach((result, idx) => {
+        if (result.status === "fulfilled" && result.value.some((r) => r.attendance === true)) {
+          marked.add(activeDrills[idx].id);
+        }
+      });
+      setMarkedDrillIds(marked);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load crew dashboard");
     }
@@ -109,12 +121,11 @@ export default function CrewDashboardPage() {
                     {drill.status === "active" ? (
                       <button
                         className="ghost-button"
-                        disabled={submittingDrill === drill.id}
+                        disabled={submittingDrill === drill.id || markedDrillIds.has(drill.id)}
                         onClick={async () => {
                           setSubmittingDrill(drill.id);
                           try {
                             await markDrillAttendance(drill.id, true);
-                            alert("Attendance marked as present!");
                             await reload();
                           } catch (err) {
                             setError(err instanceof Error ? err.message : "Failed to mark attendance");
@@ -123,7 +134,7 @@ export default function CrewDashboardPage() {
                           }
                         }}
                       >
-                        Mark Present
+                        {markedDrillIds.has(drill.id) ? "Already Marked Present ✓" : "Mark Present"}
                       </button>
                     ) : null}
                   </div>
