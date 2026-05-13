@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.api.routes import auth, dashboard, drills, maintenance, ships, users
 from app.core.config import settings
 from app.core.database import SessionLocal, init_db
 from app.services.seed import seed_initial_data
+from app.services.drill_service import refresh_drill_statuses
 
 
 def create_app() -> FastAPI:
@@ -26,6 +28,15 @@ def create_app() -> FastAPI:
     app.include_router(drills.router, prefix=settings.API_PREFIX)
     app.include_router(dashboard.router, prefix=settings.API_PREFIX)
 
+    scheduler = BackgroundScheduler()
+
+    def _auto_refresh_drills() -> None:
+        db = SessionLocal()
+        try:
+            refresh_drill_statuses(db)
+        finally:
+            db.close()
+
     @app.on_event("startup")
     def on_startup() -> None:
         init_db()
@@ -34,6 +45,12 @@ def create_app() -> FastAPI:
             seed_initial_data(db)
         finally:
             db.close()
+        scheduler.add_job(_auto_refresh_drills, "interval", seconds=60, id="drill_refresh")
+        scheduler.start()
+
+    @app.on_event("shutdown")
+    def on_shutdown() -> None:
+        scheduler.shutdown(wait=False)
 
     @app.get("/health")
     def health() -> dict[str, str]:
