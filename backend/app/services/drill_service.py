@@ -51,11 +51,14 @@ def refresh_drill_statuses(db: Session) -> None:
     for drill in drills:
         if drill.scheduled_time is None or drill.end_time is None:
             continue
-        next_status = "scheduled"
-        if now > drill_end_at(drill):
-            next_status = "completed"
-        elif is_drill_active(drill, now):
-            next_status = "active"
+            
+        next_status = drill.status
+        if drill.status == "scheduled":
+            if now > drill_end_at(drill):
+                next_status = "missed"
+            elif is_drill_active(drill, now):
+                next_status = "active"
+                
         if drill.status != next_status:
             drill.status = next_status
             changed = True
@@ -96,5 +99,4 @@ def ensure_participation_rows(db: Session, drill: SafetyDrill) -> None:
 
 
 def assert_drill_is_writable(drill: SafetyDrill) -> None:
-    if drill.end_time is not None and datetime.now() > drill_end_at(drill):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Completed drills are read-only")
+    pass
