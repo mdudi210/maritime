@@ -51,16 +51,11 @@ def refresh_drill_statuses(db: Session) -> None:
     for drill in drills:
         if drill.scheduled_time is None or drill.end_time is None:
             continue
-            
-        next_status = drill.status
-        if drill.status == "scheduled":
-            if now > drill_end_at(drill):
-                next_status = "missed"
-            elif is_drill_active(drill, now):
-                next_status = "active"
-                
-        if drill.status != next_status:
-            drill.status = next_status
+        if drill.status == "scheduled" and is_drill_active(drill, now):
+            drill.status = "active"
+            changed = True
+        elif drill.status in ("scheduled", "active") and now > drill_end_at(drill):
+            drill.status = "completed"
             changed = True
 
     if changed:

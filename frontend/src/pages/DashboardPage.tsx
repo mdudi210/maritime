@@ -343,44 +343,24 @@ export default function DashboardPage() {
                     <>
                       <span className="status-pill">{drill.status}</span>
                       {drill.status === "active" ? (
-                        <>
-                          <button
-                            className="ghost-button"
-                            disabled={submittingDrill === drill.id}
-                            onClick={async () => {
-                              setSubmittingDrill(drill.id);
-                              try {
-                                await markDrillAttendance(drill.id, true);
-                                alert("Attendance marked as present!");
-                                await reload();
-                              } catch (err) {
-                                setAttendanceError(err instanceof Error ? err.message : "Failed to mark attendance");
-                              } finally {
-                                setSubmittingDrill(null);
-                              }
-                            }}
-                          >
-                            Mark Present
-                          </button>
-                          <button
-                            className="primary-button"
-                            disabled={submittingDrill === drill.id}
-                            onClick={async () => {
-                              setSubmittingDrill(drill.id);
-                              try {
-                                await submitDrillCompletion(drill.id, true);
-                                alert("Drill marked as completed!");
-                                await reload();
-                              } catch (err) {
-                                setAttendanceError(err instanceof Error ? err.message : "Failed to submit completion");
-                              } finally {
-                                setSubmittingDrill(null);
-                              }
-                            }}
-                          >
-                            Complete Drill
-                          </button>
-                        </>
+                        <button
+                          className="ghost-button"
+                          disabled={submittingDrill === drill.id}
+                          onClick={async () => {
+                            setSubmittingDrill(drill.id);
+                            try {
+                              await markDrillAttendance(drill.id, true);
+                              alert("Attendance marked as present!");
+                              await reload();
+                            } catch (err) {
+                              setAttendanceError(err instanceof Error ? err.message : "Failed to mark attendance");
+                            } finally {
+                              setSubmittingDrill(null);
+                            }
+                          }}
+                        >
+                          Mark Present
+                        </button>
                       ) : null}
                     </>
                   ) : null}

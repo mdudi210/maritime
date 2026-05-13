@@ -159,18 +159,13 @@ def mark_attendance(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("crew")),
 ):
+    refresh_drill_statuses(db)
     drill = db.get(SafetyDrill, drill_id)
     if not drill:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found")
     if not current_user.all_ships and current_user.ship_id != drill.ship_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
-    if drill.scheduled_time is None or drill.end_time is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Drill start and end time are required before attendance can be marked",
-        )
-    if not is_drill_active(drill):
-        refresh_drill_statuses(db)
+    if drill.status != "active":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Attendance can only be marked while the drill is active",
@@ -207,18 +202,13 @@ def submit_completion(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role("crew")),
 ):
+    refresh_drill_statuses(db)
     drill = db.get(SafetyDrill, drill_id)
     if not drill:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Drill not found")
     if not current_user.all_ships and current_user.ship_id != drill.ship_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
-    if drill.scheduled_time is None or drill.end_time is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Drill start and end time are required before completion can be submitted",
-        )
-    if not is_drill_active(drill):
-        refresh_drill_statuses(db)
+    if drill.status != "active":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Completion can only be submitted while the drill is active",
@@ -245,7 +235,6 @@ def submit_completion(
         participation.completion_status = "completed"
         participation.attended_at = participation.attended_at or datetime.utcnow()
         participation.completed_at = datetime.utcnow()
-        drill.status = "completed"
     else:
         participation.completion_status = "missed"
         participation.completed_at = None
