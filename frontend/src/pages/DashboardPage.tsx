@@ -13,7 +13,9 @@ import {
   updateShip,
   createShip,
   updateSafetyDrill,
-  updateMaintenanceStatus
+  updateMaintenanceStatus,
+  markDrillAttendance,
+  submitDrillCompletion
 } from "../api/maritimeApi";
 import { useAuth } from "../auth/AuthContext";
 import AppShell from "../components/AppShell";
@@ -48,6 +50,7 @@ export default function DashboardPage() {
   const [creatingShip, setCreatingShip] = useState(false);
   const [newShipName, setNewShipName] = useState("");
   const [newShipImo, setNewShipImo] = useState("");
+  const [submittingDrill, setSubmittingDrill] = useState<number | null>(null);
 
   const selectedShip = useMemo(
     () => ships.find((ship) => selectedShipId !== "all" && ship.id === selectedShipId),
@@ -334,9 +337,53 @@ export default function DashboardPage() {
                       >
                         View attendance
                       </button>
+                      <span className="status-pill">{drill.status}</span>
+                    </>
+                  ) : user?.role === "crew" ? (
+                    <>
+                      <span className="status-pill">{drill.status}</span>
+                      {drill.status === "active" ? (
+                        <>
+                          <button
+                            className="ghost-button"
+                            disabled={submittingDrill === drill.id}
+                            onClick={async () => {
+                              setSubmittingDrill(drill.id);
+                              try {
+                                await markDrillAttendance(drill.id, true);
+                                alert("Attendance marked as present!");
+                                await reload();
+                              } catch (err) {
+                                setAttendanceError(err instanceof Error ? err.message : "Failed to mark attendance");
+                              } finally {
+                                setSubmittingDrill(null);
+                              }
+                            }}
+                          >
+                            Mark Present
+                          </button>
+                          <button
+                            className="primary-button"
+                            disabled={submittingDrill === drill.id}
+                            onClick={async () => {
+                              setSubmittingDrill(drill.id);
+                              try {
+                                await submitDrillCompletion(drill.id, true);
+                                alert("Drill marked as completed!");
+                                await reload();
+                              } catch (err) {
+                                setAttendanceError(err instanceof Error ? err.message : "Failed to submit completion");
+                              } finally {
+                                setSubmittingDrill(null);
+                              }
+                            }}
+                          >
+                            Complete Drill
+                          </button>
+                        </>
+                      ) : null}
                     </>
                   ) : null}
-                  {user?.role === "admin" ? <span className="status-pill">{drill.status}</span> : null}
                 </div>
               </article>
             ))}
